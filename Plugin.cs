@@ -4,6 +4,7 @@ using Comfort.Common;
 using EFT;
 using Newtonsoft.Json;
 using RealismMod.Audio;
+using RealismMod.VisualEffects;
 using RealismMod.Health;
 using SPT.Common.Http;
 using System;
@@ -64,7 +65,7 @@ namespace RealismMod
     [BepInPlugin(PluginInfo.PLUGIN_GUID, PluginInfo.PLUGIN_NAME, Plugin.PLUGINVERSION)]
     public class Plugin : BaseUnityPlugin
     {
-        private const string PLUGINVERSION = "1.6.2";
+        private const string PLUGINVERSION = "1.6.3";
 
         public static Plugin Instance;
         //delete this
@@ -509,8 +510,8 @@ namespace RealismMod
                 Utils.LoadLoot(player.position, player.rotation, PluginConfig.TargetZone.Value);
 #pragma warning disable CS4014
                 Utils.Logger.LogWarning("\"position\": {" + "\"x\":" + player.position.x + "," + "\"y\":" + player.position.y + "," + "\"z\":" + player.position.z + "},");
-                Utils.Logger.LogWarning("new Vector3(" + player.position.x + "f, " + player.position.y + "f, " + player.position.z + "f)");
                 Utils.Logger.LogWarning("\"rotation\": {" + "\"x\":" + player.rotation.eulerAngles.x + "," + "\"y\":" + player.eulerAngles.y + "," + "\"z\":" + player.eulerAngles.z + "}");
+                //Utils.Logger.LogWarning("new Vector3(" + player.position.x + "f, " + player.position.y + "f, " + player.position.z + "f)");
             }
             if (Input.GetKeyDown(KeyCode.Keypad0)) HazardTracker.WipeTracker();
          
@@ -560,11 +561,10 @@ namespace RealismMod
 
         private void LoadGeneralPatches()
         {
-            if (ServerConfig.spawn_waves) 
+     /*       if (ServerConfig.spawn_waves) 
             {
-                new SpawnUpdatePatch().Enable();
-
-            }
+                new SpawnUpdatePatch().Enable(); //don't think this actually does anything, may cause issues?
+            }*/
   
             //deafening + adrenaline trigger
             new FlyingBulletPatch().Enable();
@@ -604,7 +604,7 @@ namespace RealismMod
             new HealthPanelPatch().Enable();
             new DropItemPatch().Enable();
             new GetAvailableActionsPatch().Enable();
-           // if (ServerConfig.boss_spawns || ServerConfig.spawn_waves) new BossSpawnPatch().Enable();
+           // if (ServerConfig.boss_spawns || ServerConfig.spawn_waves) new BossSpawnPatch().Enable(); //not sure why I disabled this?
             new LampPatch().Enable();
             new AmbientSoundPlayerGroupPatch().Enable();
             new DayTimeAmbientPatch().Enable();

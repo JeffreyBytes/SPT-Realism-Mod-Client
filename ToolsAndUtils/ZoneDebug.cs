@@ -331,7 +331,7 @@ namespace RealismMod
             float delta = Time.deltaTime;
             float speed = ChangeSpeed.Value;
 
-            switch (Mode)//
+            switch (Mode)
             {
                 case EInputMode.Rotate:
                     {

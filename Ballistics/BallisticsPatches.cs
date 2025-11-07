@@ -20,6 +20,7 @@ using SkillManagerClass = EFT.SkillManager.GClass2017;
 namespace RealismMod
 {
     //Fix weapon accuracy stat not being used properly by BSG
+    //Also apply recoil bloom here
     public class InitiateShotPatch : ModulePatch
     {
         private static FieldInfo _playerfield;
@@ -40,6 +41,17 @@ namespace RealismMod
             _soundField = AccessTools.Field(typeof(FirearmController), "weaponSoundPlayer_0");
             _recoilField = AccessTools.Field(typeof(FirearmController), "float_5");
             return typeof(Player.FirearmController).GetMethod("method_58", BindingFlags.Instance | BindingFlags.Public);
+        }
+
+        private static Vector3 CalculateRecoilBloom(float overHeatFactor) 
+        {
+            if (ShootController.ShotCount <= 0) return Vector3.zero;
+            float baseBloom = ShootController.FactoredTotalDispersion * 0.0007f * Mathf.Pow(ShootController.ShotCount, 0.2f) * overHeatFactor;
+            float horizontal = UnityEngine.Random.Range(-baseBloom, baseBloom);
+            float vertical = UnityEngine.Random.Range(0f, baseBloom);
+            float sideBloom = Mathf.Clamp(horizontal, -0.02f, 0.02f);
+            float verticalBloom = Mathf.Clamp(vertical, 0f, 0.02f);
+            return new Vector3(sideBloom, verticalBloom, 0f);
         }
 
         [PatchPrefix]
@@ -83,7 +95,7 @@ namespace RealismMod
                     Vector3 vector2 = new Vector3(x, y);
                     float angle = vector2.y * -1f;
                     baseShotDirection = Quaternion.AngleAxis(vector2.x, original.forward) * baseShotDirection;
-                    baseShotDirection = Quaternion.AngleAxis(angle, original.right) * baseShotDirection;
+                    baseShotDirection = Quaternion.AngleAxis(angle, original.right) * baseShotDirection; //is this a mistake? it's what BSG does...
                 }
             }
             else
@@ -100,7 +112,7 @@ namespace RealismMod
             }
             float ramdomnessFactor = (accuracy + doubleActionFactor) * ammoFactor * heatFactor * barrelDeviation * (float)accuracyBuff * 0.012f;
             Vector3 randomSphere = UnityEngine.Random.insideUnitSphere * ramdomnessFactor;
-            Vector3 shotDirection = baseShotDirection + randomSphere;
+            Vector3 shotDirection = baseShotDirection + randomSphere + CalculateRecoilBloom(heatFactor);
   
             __instance.InitiateShot(weapon, ammo, shotPosition, shotDirection.normalized, position, chamberIndex, weapon.MalfState.LastShotOverheat);
             float recoilFactor = (doubleShot != 0) ? 1.5f : 1f;

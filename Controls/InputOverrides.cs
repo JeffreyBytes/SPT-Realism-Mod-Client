@@ -67,6 +67,9 @@ namespace RealismMod
             {
                 Player player = Utils.GetYourPlayer();
                 FirearmController fc = player.HandsController as FirearmController;
+
+                if (fc.IsAiming) fc.ToggleAim();
+
                 if (player.MovementContext.CurrentState.Name != EPlayerState.Stationary
                     && !Plugin.CanLoadChamber && fc.Weapon.HasChambers && fc.Weapon.Chambers.Length == 1
                     && fc.Weapon.ChamberAmmoCount == 0 && fc.Weapon.GetCurrentMagazine() != null && fc.Weapon.GetCurrentMagazine().Count > 0)
@@ -98,7 +101,7 @@ namespace RealismMod
             }
             if (command == ECommand.ToggleBipods) 
             {
-                if (StanceController.CurrentStance != EStance.None) return false;
+                //if (StanceController.CurrentStance != EStance.None) return false; //not sure why this is an issue?
                 StanceController.IsMounting = false;
             }
             //cancel stances

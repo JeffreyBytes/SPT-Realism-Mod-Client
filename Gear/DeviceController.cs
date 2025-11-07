@@ -375,7 +375,7 @@ namespace RealismMod
             audioSource.playOnAwake = false;
             audioSource.spatialBlend = 1.0f;
             audioSource.minDistance = 0.7f;
-            audioSource.maxDistance = 30f;
+            audioSource.maxDistance = 35f;
             audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
             return audioSource;
         }

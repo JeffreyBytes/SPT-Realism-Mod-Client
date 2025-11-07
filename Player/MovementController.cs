@@ -84,7 +84,7 @@ namespace RealismMod
             float recoilFactor = ShootController.FactoredTotalVRecoil + ShootController.FactoredTotalHRecoil;
             float ergoFactor = Mathf.Clamp(1f - ((80f - WeaponStats.ErgoFactor) / 100f), 0.1f, 1f);
             recoilFactor = recoilFactor * dispersionFactor * convergenceFactor * ergoFactor;
-            recoilFactor = fc.Item.WeapClass == "pistol" ? recoilFactor * 0.1f : recoilFactor;
+            recoilFactor = WeaponStats.IsPistol ? recoilFactor * 0.1f : recoilFactor;
             float recoilLimit = 1f - (recoilFactor / 100f);
             float totalRecoilFactor = 1f - ((recoilFactor / 400f) * ShootController.ShotCount);
             totalRecoilFactor = Mathf.Clamp(totalRecoilFactor, 0.6f * recoilLimit, 1f);

@@ -74,11 +74,11 @@ namespace RealismMod.Audio
 
             if (PlayerState.EnviroType == EnvironmentType.Indoor || PlayerState.BtrState == EPlayerBtrState.Inside)
             {
-                _audioSource.volume = Mathf.MoveTowards(_audioSource.volume, Volume * 0.5f, 0.35f * Time.deltaTime);
+                _audioSource.volume = Mathf.MoveTowards(_audioSource.volume, Volume * 0.5f * GameWorldController.GetGameVolumeAsFactor(), 0.35f * Time.deltaTime);
             }
             else
             {
-                _audioSource.volume = Mathf.MoveTowards(_audioSource.volume, Volume, 0.35f * Time.deltaTime);
+                _audioSource.volume = Mathf.MoveTowards(_audioSource.volume, Volume * GameWorldController.GetGameVolumeAsFactor(), 0.35f * Time.deltaTime);
             }
 
             if (FollowPlayer)

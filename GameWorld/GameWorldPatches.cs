@@ -580,14 +580,14 @@ namespace RealismMod
                 if (GameWorldController.DoMapGasEvent)
                 {
                     Player player = Utils.GetYourPlayer();
-                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.GasEventAudioClips, volume: 1.2f, minDelayBeforePlayback: 60f); //spooky short playback
-                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.GasEventLongAudioClips, true, 5f, 30f, 0.2f, 55f, 65f, minDelayBeforePlayback: 0f); //long ambient
+                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.GasEventAudioClips, volume: 2f, minDelayBeforePlayback: 60f); //spooky short playback
+                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.GasEventLongAudioClips, true, 5f, 30f, 0.4f, 55f, 65f, minDelayBeforePlayback: 0f); //long ambient
                 }
 
                 if (GameWorldController.DoMapRads)
                 {
                     Player player = Utils.GetYourPlayer();
-                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.RadEventAudioClips, volume: 1f, minDelayBeforePlayback: 60f); //thunder
+                    AmbientAudioInitializer.CreateAmbientAudioPlayer(player, player.gameObject.transform, Plugin.RealismAudioController.RadEventAudioClips, volume: 1.5f, minDelayBeforePlayback: 60f); //thunder
                 }
 
                 //spawn zones
