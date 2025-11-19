@@ -517,7 +517,7 @@ namespace RealismMod
          
             if (Input.GetKeyDown(PluginConfig.AddZone.Value.MainKey)) DebugZones();
 
-            //if (Input.GetKeyDown(KeyCode.Keypad5)) Instantiate(Plugin.ExplosionGO, new Vector3(PluginConfig.test1.Value, PluginConfig.test2.Value, PluginConfig.test3.Value), new Quaternion(0, 0, 0, 0)); //new Vector3(1000f, 0f, 317f)
+            if (Input.GetKeyDown(KeyCode.Keypad5)) Instantiate(Plugin.ExplosionGO, new Vector3(PluginConfig.test1.Value, PluginConfig.test2.Value, PluginConfig.test3.Value), new Quaternion(0, 0, 0, 0)); //new Vector3(1000f, 0f, 317f)
         }
 
         //games procedural animations are highly affected by FPS. I balanced everything at 144 FPS, so need to factor it.    
@@ -561,11 +561,11 @@ namespace RealismMod
 
         private void LoadGeneralPatches()
         {
-     /*       if (ServerConfig.spawn_waves) 
+/*            if (ServerConfig.spawn_waves)
             {
                 new SpawnUpdatePatch().Enable(); //don't think this actually does anything, may cause issues?
             }*/
-  
+
             //deafening + adrenaline trigger
             new FlyingBulletPatch().Enable();
 
@@ -604,7 +604,7 @@ namespace RealismMod
             new HealthPanelPatch().Enable();
             new DropItemPatch().Enable();
             new GetAvailableActionsPatch().Enable();
-           // if (ServerConfig.boss_spawns || ServerConfig.spawn_waves) new BossSpawnPatch().Enable(); //not sure why I disabled this?
+            if (ServerConfig.boss_spawns || ServerConfig.spawn_waves) new BossSpawnPatch().Enable(); //not sure why I disabled this?
             new LampPatch().Enable();
             new AmbientSoundPlayerGroupPatch().Enable();
             new DayTimeAmbientPatch().Enable();

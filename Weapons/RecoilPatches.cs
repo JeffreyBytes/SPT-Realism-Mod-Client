@@ -356,7 +356,7 @@ namespace RealismMod
                 float stockedPistolFactor = WeaponStats.IsStockedPistol ? 0.75f : 1f;
 
                 __instance._firearmController = firearmController;
-                __instance.RecoilStableShotIndex = WeaponStats.IsStocklessPistol ? 2 : 1;
+                __instance.RecoilStableShotIndex = 1;
                 __instance.HandRotationRecoil.RecoilReturnTrajectoryOffset = template.RecoilReturnPathOffsetHandRotation * PluginConfig.AfterRecoilRandomness.Value;
                 __instance.HandRotationRecoil.StableAngleIncreaseStep = template.RecoilStableAngleIncreaseStep;
                 __instance.HandRotationRecoil.AfterRecoilOffsetVerticalRange = Vector2.zero; // template.PostRecoilVerticalRangeHandRotation * Plugin.AfterRecoilRandomness.Value;
@@ -577,9 +577,10 @@ namespace RealismMod
                 positionRecoilPower *= horzFactor;
 
                 //Recalculate and modify dispersion
+                float configDispMulti = WeaponStats.IsPistol ? PluginConfig.PistolDispMulti.Value : PluginConfig.RifleDispMulti.Value;
                 float dispFactor = incomingForce * PlayerState.RecoilInjuryMulti * shortStockingDebuff * playerWeightFactorDebuff *
-                    mountingDispMulti * leftShoulderFactor * rifleShotFactor * PluginConfig.DispMulti.Value;
-                ShootController.FactoredTotalDispersion = ShootController.BaseTotalDispersion * dispFactor;
+                    mountingDispMulti * leftShoulderFactor * rifleShotFactor * PluginConfig.RifleDispMulti.Value;
+                ShootController.FactoredTotalDispersion = ShootController.BaseTotalDispersion * configDispMulti;
 
                 __instance.HandRotationRecoil.ProgressRecoilAngleOnStable = new Vector2(ShootController.FactoredTotalDispersion * PluginConfig.RecoilRandomness.Value, ShootController.FactoredTotalDispersion * PluginConfig.RecoilRandomness.Value);
 

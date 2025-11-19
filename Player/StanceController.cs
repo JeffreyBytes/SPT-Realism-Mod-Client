@@ -6,6 +6,7 @@ using EFT.InventoryLogic;
 using HarmonyLib;
 using System.Collections.Generic;
 using System.Linq;
+using TMPro;
 using UnityEngine;
 using static EFT.Player;
 
@@ -61,19 +62,11 @@ namespace RealismMod
         public static bool HaveSetAiming = false;
         public static bool HaveSetActiveAim = false;
 
-        public static bool IsLeftStanceResetState = false;
+        public static bool _isLeftStanceResetState = false;
         private static float _leftStanceTime = 0f;
         private static Vector3 _leftStanceRotaiton;
 
-        private static float _leftStanceAnimationTimer = 0f;
-        private static float _leftStanceAnimSpeed = 1f;
         private static float _pistolPosSpeed = 1f;
-
-
-        /*        private static Vector3 _dampVelocity;
-                private static float _pistolVelX;
-                private static float _pistolVelY;
-                private static float _pistolVelZ;*/
 
         private static float _currentRifleXPos = 0f;
         private static float _currentRifleYPos = 0f;
@@ -88,6 +81,45 @@ namespace RealismMod
         private static float _gunXTarget = 0f;
         private static float _gunYTarget = 0f;
         private static float _gunZTarget = 0f;
+
+        private static Vector3 _leftStancePistolRotaitonTarget = new Vector3(0f, -10f, 0f);
+        private static Vector3 _leftStancePistolPositionTarget = new Vector3(0f, -0.02f, 0f);
+        private static Vector3 _leftStanceRifleRotaitonTarget = new Vector3(0f, -10f, 0f);
+        private static Vector3 _leftStanceRiflePositionTarget = new Vector3(0f, 0f, 0f);
+        private static Vector3 _leftStancePosition = Vector3.zero;
+        private static Vector3 _leftStanceVelocity = Vector3.zero;
+        private static float _leftStanceProgress = 0f;
+        private static float _leftStanceTargetX;
+
+        private static AnimationCurve _leftRotationXCurve = new AnimationCurve(
+            new Keyframe(0, 0f),
+            new Keyframe(0.25f, -2f),
+            new Keyframe(0.5f, -5f),
+            new Keyframe(0.75f, -1.5f),
+            new Keyframe(1, 0f)
+        );
+
+        private static AnimationCurve _leffPosZCurve = new AnimationCurve(
+            new Keyframe(0, 0f),
+            new Keyframe(0.15f, 0.1f),
+            new Keyframe(0.3f, 0.075f),
+            new Keyframe(0.5f, 0.1f),
+            new Keyframe(0.65f, 0.05f),
+            new Keyframe(0.7f, 0.025f),
+            new Keyframe(0.9f, -0.045f),
+            new Keyframe(1, 0f)
+        );
+
+        private static AnimationCurve _leffPosZCurveReturn = new AnimationCurve(
+            new Keyframe(0, 0f),
+            new Keyframe(0.15f, -0.05f),
+            new Keyframe(0.3f, 0.025f),
+            new Keyframe(0.5f, 0.05f),
+            new Keyframe(0.65f, 0.075f),
+            new Keyframe(0.7f, 0.05f),
+            new Keyframe(0.9f, 0.1f),
+            new Keyframe(1, 0f)
+            );
 
         public static Vector3 CoverWiggleDirection = Vector3.zero;
         public static Vector3 BaseWeaponOffsetPosition = Vector3.zero;
@@ -143,7 +175,7 @@ namespace RealismMod
 
         private static bool _isLeftShoulder = false;
         public static bool CancelLeftShoulder = false;
-        public static bool DoLeftShoulderTransition = false;
+        public static bool HaveResetLeftShoulder = false;
         public static bool IsDoingTacSprint = false;
         public const float TAC_SPRINT_WEIGHT_LIMIT = 5.1f;
         public const float TAC_SPRINT_WEIGHT_BULLPUP = 5.75f;
@@ -207,20 +239,6 @@ namespace RealismMod
             Target = 0f
         };
 
-        private static AnimationCurve _smoothCurve = new AnimationCurve(
-         new Keyframe(0, 0.05f),
-         new Keyframe(0.1f, 0.075f),
-         new Keyframe(0.2f, 0.1f),
-         new Keyframe(0.3f, 0.2f),
-         new Keyframe(0.4f, 0.4f),
-         new Keyframe(0.5f, 0.5f),
-         new Keyframe(0.6f, 0.4f),
-         new Keyframe(0.7f, 0.3f),
-         new Keyframe(0.8f, 0.2f),
-         new Keyframe(0.9f, 0.1f),
-         new Keyframe(1, 1f)
-        );
-
         public static Vector3 MountPos { get; set; }
         public static Vector3 MountDir { get; set; }
 
@@ -228,7 +246,7 @@ namespace RealismMod
         {
             get
             {
-                return HasResetActiveAim && HasResetLowReady && HasResetHighReady && HasResetShortStock && HasResetPistolPos && !DoLeftShoulderTransition; //&& HasResetMelee
+                return HasResetActiveAim && HasResetLowReady && HasResetHighReady && HasResetShortStock && HasResetPistolPos && HaveResetLeftShoulder; //&& HasResetMelee
             }
         }
 
@@ -319,6 +337,12 @@ namespace RealismMod
             }
         }
 
+        public static bool IsLeftStanceResetState 
+        {
+            get { return _isLeftStanceResetState; }
+            private set  { _isLeftStanceResetState = value; }
+        }
+
         public static bool IsLeftShoulder
         {
             get { return _isLeftShoulder; }
@@ -329,6 +353,14 @@ namespace RealismMod
                     _isLeftShoulder = value;
                     Utils.GetYourPlayer().ProceduralWeaponAnimation.method_23(); //to recalculate sway (I think)
                 }
+            }
+        }
+
+        public static bool IsDoingLeftShoulderNotBlocked
+        {
+            get 
+            {
+                return IsLeftShoulder && !IsBlindFiring && !CancelLeftShoulder; 
             }
         }
 
@@ -369,21 +401,23 @@ namespace RealismMod
             return isCanted && isAimingOk;
         }
 
+        public static bool AimingInterrupted { get; set; }
+
         public static void InterruptAim(FirearmController fc)
         {
-            if (fc.IsAiming)
+            if (fc.IsAiming && !AimingInterrupted)
             {
                 fc.ToggleAim();
-                AccessTools.Field(typeof(FirearmController), "AimingInterruptedByOverlap").SetValue(fc, true);
+                AimingInterrupted = true;
             }
         }
 
         public static void UnInterruptAim(FirearmController fc) 
         {
-            if (!fc.IsAiming && (bool)AccessTools.Field(typeof(FirearmController), "AimingInterruptedByOverlap").GetValue(fc))
+            if (!fc.IsAiming && AimingInterrupted)
             {
                 fc.ToggleAim();
-                AccessTools.Field(typeof(FirearmController), "AimingInterruptedByOverlap").SetValue(fc, false);
+                AimingInterrupted = false;
             }
         }
 
@@ -692,6 +726,7 @@ namespace RealismMod
 
         public static void ToggleLeftShoulder()
         {
+            Utils.GetYourPlayer().method_58(3f, true);
             IsLeftShoulder = !IsLeftShoulder;
             if (!TreatWeaponAsPistolStance)
             {
@@ -721,7 +756,7 @@ namespace RealismMod
                 //patrol
                 if (!ShouldBlockAllStances && Input.GetKeyDown(PluginConfig.PatrolKeybind.Value.MainKey) && PluginConfig.PatrolKeybind.Value.Modifiers.All(Input.GetKey))
                 {
-                    Utils.GetYourPlayer().method_58(0.5f);
+                    Utils.GetYourPlayer().method_58(3f, true);
                     ToggleStance(EStance.PatrolStance);
                     StoredStance = EStance.None;
                     StanceBlender.Target = 0f;
@@ -923,6 +958,7 @@ namespace RealismMod
                 StanceIndex = 0;
                 WasActiveAim = false;
                 DidWeaponSwap = false;
+                AimingInterrupted = false;
                 ResetStanceStamina();
             }
         }
@@ -953,11 +989,11 @@ namespace RealismMod
             }
         }
 
-        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 1.05f, float wiggleFactor = 1f, bool isADS = false)
+        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 3f, float wiggleFactor = 1f, bool isADS = false)
         {
             if (playSound)
             {
-                player.method_58(volume);
+                player.method_58(volume, true);
             }
 
             NewRecoilShotEffect newRecoil = pwa.Shootingg.CurrentRecoilEffect as NewRecoilShotEffect;
@@ -977,15 +1013,18 @@ namespace RealismMod
             player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.RecoilProcessValues[4].IntensityMultiplicator = 0;
         }
 
-        private static void MoveGunToCameraPID(ProceduralWeaponAnimation pwa, float dt, float stanceMulti, ref float gunAxesTarget, ref float gunCameraAlignmentTarget, float camTargetAxes, float speedModifer, float tolerance = 0.001f)
+        private static void MoveGunToCameraPID(ProceduralWeaponAnimation pwa, float dt, float stanceMulti, ref float gunAxesTarget, ref float gunCameraAlignmentTarget, float camTargetAxes, float speedModifer, float tolerance = 0.001f, bool ignoreLeftShoulder = false)
         {
-            if (IsColliding || PistolIsColliding || !pwa.OverlappingAllowsBlindfire || StopCameraMovement) return;
-                
             if (!IsAiming)
             {
                 gunCameraAlignmentTarget = camTargetAxes;
             }
-            else if (!ShootController.IsFiringMovement)
+
+            if (IsColliding || PistolIsColliding || !pwa.OverlappingAllowsBlindfire || StopCameraMovement || (IsDoingLeftShoulderNotBlocked && !ignoreLeftShoulder)) return;
+
+            bool skipPIDForRifle = ShootController.IsFiringMovement && !PluginConfig.EnableAltRifleRecoil.Value && !TreatWeaponAsPistolStance;
+            bool skipPIDForPistol = ShootController.IsFiringMovement && TreatWeaponAsPistolStance;
+            if (IsAiming && !skipPIDForRifle && !skipPIDForPistol)
             {
                 float speed = speedModifer * stanceMulti;
 
@@ -1001,6 +1040,20 @@ namespace RealismMod
                     gunAxesTarget += adjustment;
                 }
             }
+        }
+
+        private static Vector3 GetRifleStancePIDModifier()
+        {
+            if (StoredStance == EStance.HighReady)
+                return new Vector3(0.6f, 0.35f, 1f);
+            if (StoredStance == EStance.LowReady)
+                return new Vector3(0.8f, 0.7f, 1f);
+            if (StoredStance == EStance.ShortStock)
+                return new Vector3(0.5f, 0.3f, 1f);
+            if (StoredStance == EStance.ActiveAiming || WasActiveAim)
+                return new Vector3(1.5f, 0.75f, 1f);
+
+            return Vector3.one;
         }
 
         //non-stance related rotational and postion changes for immersion
@@ -1048,18 +1101,79 @@ namespace RealismMod
             pwa.HandsContainer.WeaponRoot.localRotation *= newRot;
         }
 
+        private static void CheckLeftShoulder(Player player, Player.FirearmController fc, ProceduralWeaponAnimation pwa, float stanceMulti, float dt, Vector3 posTarget, Vector3 rotTarget, float rotSpeed, float curveModifier = 1f)
+        {
+            float baseSpeed = Mathf.Clamp((1f - stanceMulti) + 1f, 0.05f, 1.5f);
+            float speed = IsAiming ? baseSpeed * 0.22f : baseSpeed * 0.22f;
+
+            //position
+
+            var xTarget = posTarget.x + PluginConfig.LeftShoulderOffset.Value;
+            var position = IsDoingLeftShoulderNotBlocked
+                ? new Vector3(xTarget, posTarget.y, posTarget.z + (_leffPosZCurve.Evaluate(_leftStanceProgress) * curveModifier))
+                : new Vector3(0f, 0f, _leffPosZCurveReturn.Evaluate(_leftStanceProgress) * curveModifier);
+
+            if (IsDoingLeftShoulderNotBlocked)
+            {
+                _leftStanceTargetX = xTarget;
+                _leftStanceTime = 0f;
+                _isLeftStanceResetState = false;
+            }
+            else
+            {        
+                _leftStanceTime += dt;
+                if (_leftStanceTime <= 0.5f)
+                {
+                    _isLeftStanceResetState = true;
+                }
+                else
+                {
+                    _isLeftStanceResetState = false;
+                }
+            }
+
+            _leftStancePosition = Vector3.SmoothDamp(_leftStancePosition, position, ref _leftStanceVelocity, speed, 0.55f, dt);
+
+            _leftStanceProgress = Mathf.InverseLerp(0f, _leftStanceTargetX, _leftStancePosition.x);
+
+            if (Utils.AreFloatsEqual(_leftStanceProgress, 0f) && !IsLeftShoulder) HaveResetLeftShoulder = true;
+            else HaveResetLeftShoulder = false;
+
+            //moving towards 1, and is left shoulder
+            bool isTransitionignLeft = IsLeftShoulder && Utils.IsLessThan(_leftStanceProgress, 0.99f);
+            bool isTransitioningRight = (_isLeftStanceResetState || !IsLeftShoulder) && Utils.IsGreaterThan(_leftStanceProgress, 0.01f);
+
+            if (IsAiming && (isTransitionignLeft || isTransitioningRight))
+            {
+                Utils.Logger.LogWarning($"//InterruptAim");
+                InterruptAim(fc);
+            } 
+            if (!isTransitionignLeft && !isTransitioningRight)
+            {
+                Utils.Logger.LogWarning($"==UnInterruptAim");
+                UnInterruptAim(fc);
+            }
+
+            //rotation
+            var rotation = IsDoingLeftShoulderNotBlocked && !IsAiming ? rotTarget : Vector3.zero;
+            rotation.x += _leftRotationXCurve.Evaluate(_leftStanceProgress);
+
+            _leftStanceRotaiton = Vector3.Lerp(_leftStanceRotaiton, rotation, rotSpeed * dt);
+            Quaternion newRot = Quaternion.Euler(_leftStanceRotaiton);
+
+            pwa.HandsContainer.WeaponRoot.localRotation *= newRot;
+        }
+
         //I've no idea wtf is going on here but it sort of works
         private static void HandleAltPistolPosition(Player player, Player.FirearmController fc, ProceduralWeaponAnimation pwa, float stanceMulti, float dt, Vector3 camTarget)
         {
             //left stance speed
-            bool isDoingLeftStance = IsLeftShoulder && !IsBlindFiring && !CancelLeftShoulder;
-            float leftResetSpeedModi = IsLeftStanceResetState ? 3f : 1f;
+            float leftResetSpeedModi = _isLeftStanceResetState ? 0.2f : 1f;
 
             //speed
             float fpsFactor = Mathf.Pow(Utils.GetFPSFactor(), 0.25f);
             float speedFactorTarget = IsAiming ? PluginConfig.PistolPosResetSpeedMulti.Value * stanceMulti : PluginConfig.PistolPosSpeedMulti.Value * stanceMulti;
-            if (isDoingLeftStance || IsLeftStanceResetState) speedFactorTarget *= IsAiming ? 0.6f : 0.7f;
-            float posResetSpeed = fpsFactor * leftResetSpeedModi * PluginConfig.PistolPosResetSpeedMulti.Value;
+            float pidSpeed = fpsFactor * leftResetSpeedModi * PluginConfig.PistolPosResetSpeedMulti.Value;
             _pistolPosSpeed = Mathf.Lerp(_pistolPosSpeed, speedFactorTarget, dt * 10f);
 
             if (!IsAiming)
@@ -1069,123 +1183,36 @@ namespace RealismMod
                 _gunZTarget =  0f;
             }
 
-            if (isDoingLeftStance)
+            CheckLeftShoulder(player, fc, pwa, _pistolPosSpeed, dt, _leftStancePistolPositionTarget, _leftStancePistolRotaitonTarget, stanceMulti * 2.5f, 0.05f);
+
+            if (Plugin.FOVFixPresent) 
             {
-                _gunXTarget = -0.08f;
-                _gunYTarget = -0.02f;
-                _gunZTarget = 0f;
-
-                IsLeftStanceResetState = true;
-                _leftStanceTime = 0f;
+                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunXTarget, ref _gunCameraAlignmentTargetX, camTarget.x, 0.15f * pidSpeed, 0.0001f);
+                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunYTarget, ref _gunCameraAlignmentTargetY, camTarget.y, 0.3f * pidSpeed, ignoreLeftShoulder: true);
+                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunZTarget, ref _gunCameraAlignmentTargetZ, camTarget.z, 0.4f * pidSpeed, ignoreLeftShoulder: true);
             }
-            else if (IsLeftStanceResetState)
-            {
-                _leftStanceTime += dt;
-                if (_leftStanceTime > 1f) 
-                {
-                    IsLeftStanceResetState = false;
-                    _leftStanceAnimationTimer = 0f;
-                    _leftStanceAnimSpeed = 1f;
-                }
-            }
-
-            if (!isDoingLeftStance) 
-            {
-                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunXTarget, ref _gunCameraAlignmentTargetX, camTarget.x, 0.15f * posResetSpeed, 0.0001f);
-                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunYTarget, ref _gunCameraAlignmentTargetY, camTarget.y, 0.3f * posResetSpeed);
-                MoveGunToCameraPID(pwa, dt, stanceMulti, ref _gunZTarget, ref _gunCameraAlignmentTargetZ, camTarget.z, 0.4f * posResetSpeed);
-            }
-
-            //this is sus, needs investigating
-            //think original intent was to smooth aiming or smooth left shoulder...or blindfire
-            //the idea was for left stance, and the check based on x axis was to applying the smoothing on toggling it on, and toggling it off
-            /*            if (isDoingLeftStance)
-                        {
-                            _leftStanceAnimationTimer += 1.9f * stanceMulti * dt;
-                            _leftStanceAnimSpeed = _smoothCurve.Evaluate(_leftStanceAnimationTimer);
-                        }
-                        else
-                        {
-                            _leftStanceAnimationTimer = 0f;
-                            _leftStanceAnimSpeed = 1f;
-                        }*/
-
-
-            /*       _currentPistolXPos = Mathf.SmoothDamp(
-                       _currentPistolXPos,0
-                       _gunXTarget,
-                       ref _pistolVelX,
-                       PluginConfig.test2.Value //0.075f
-                   );
-
-                   _currentPistolYPos = Mathf.SmoothDamp(
-                       _currentPistolYPos,
-                       _gunYTarget,
-                       ref _pistolVelY,
-                       PluginConfig.test2.Value
-                   );
-
-                   _currentPistolZPos = Mathf.SmoothDamp(
-                       _currentPistolZPos,
-                       _gunZTarget,
-                       ref _pistolVelZ,
-                       PluginConfig.test2.Value6
-                   );*/
-
 
             _currentPistolXPos = Mathf.Lerp(_currentPistolXPos, _gunXTarget, dt * _pistolPosSpeed);
             _currentPistolYPos = Mathf.Lerp(_currentPistolYPos, _gunYTarget, dt * _pistolPosSpeed);
             _currentPistolZPos = Mathf.Lerp(_currentPistolZPos, _gunZTarget, dt * _pistolPosSpeed); 
 
-            _pistolLocalPosition.x = _currentPistolXPos;
-            _pistolLocalPosition.y = _currentPistolYPos;
-            _pistolLocalPosition.z = _currentPistolZPos;
+            _pistolLocalPosition.x = _currentPistolXPos + _leftStancePosition.x;
+            _pistolLocalPosition.y = _currentPistolYPos + _leftStancePosition.y;
+            _pistolLocalPosition.z = _currentPistolZPos + _leftStancePosition.z;
 
             pwa.HandsContainer.WeaponRoot.localPosition = _pistolLocalPosition;
 
-            //rotation
-            var xRotation = isDoingLeftStance && !IsAiming ? 0f : 0f;
-            var yRotaiton = isDoingLeftStance && !IsAiming ? -0.1f : 0f;
-            var zRotation = isDoingLeftStance && !IsAiming ? 0f : 0f;
-
-            _leftStanceRotaiton = Vector3.Lerp(_leftStanceRotaiton, new Vector3(xRotation, yRotaiton, zRotation), 8f * Time.deltaTime);
-           
-            Quaternion newRot = Quaternion.identity;
-            newRot.x = _leftStanceRotaiton.x;
-            newRot.y = _leftStanceRotaiton.y;
-            newRot.z = _leftStanceRotaiton.z;
-
-            pwa.HandsContainer.WeaponRoot.localRotation *= newRot;
         }
 
-        private static Vector3 GetRifleStancePIDModifier()
-        {
-            if (StoredStance == EStance.HighReady)
-                return new Vector3(0.6f, 0.35f, 1f);
-            if (StoredStance == EStance.LowReady)
-                return new Vector3(0.8f, 0.7f, 1f);
-            if (StoredStance == EStance.ShortStock)
-                return new Vector3(0.5f, 0.3f, 1f);
-            if (StoredStance == EStance.ActiveAiming || WasActiveAim)
-                return new Vector3(1.5f, 0.75f, 1f);
-
-            return Vector3.one;
-        }
-
-        private static void HandleRiflePosition(Player player, Player.FirearmController fc, ProceduralWeaponAnimation pwa, float movementFactor, float dt, Vector3 camTarget)
+        private static void HandleRiflePosition(Player player, Player.FirearmController fc, ProceduralWeaponAnimation pwa, float stanceMulti, float movementFactor, float dt, Vector3 camTarget)
         {
             //left stance speeds
-            //float stanceFactorLeftShoulder = Mathf.Min(stanceMulti, 0.6f);
-            //float shoulderSpeed = 3f * stanceFactorLeftShoulder;
-            bool isDoingLeftStance = IsLeftShoulder && !IsBlindFiring && !CancelLeftShoulder;
-            //float leftResetSpeedModi = IsLeftStanceResetState ? 3f : 1f;
+            float leftResetPidModi = _isLeftStanceResetState ? 0f : 1f;
 
             //speeds
-            float fpsFactor = Mathf.Pow(Utils.GetFPSFactor(), 0.25f);
-            float posLerpSpeed = IsAiming ? 30f * WeaponStats.TotalFinalAimSpeed : 6f * WeaponStats.TotalFinalAimSpeed;
-            //if (isDoingLeftStance || IsLeftStanceResetState) speedFactorTarget *= IsAiming ? 0.6f : 0.7f;
-            //_riflePosSpeed = Mathf.Lerp(_riflePosSpeed, speedFactorTarget, dt * PluginConfig.test6.Value);
-            float posResetSpeed = fpsFactor * 30f; // * leftResetSpeedModi
+            float fpsFactor = Mathf.Pow(Utils.GetFPSFactor(), 0.25f);   
+            float posSpeed = IsAiming ? 30f * WeaponStats.TotalFinalAimSpeed : 6f * WeaponStats.TotalFinalAimSpeed;
+            float pidSpeed = 30f * fpsFactor * leftResetPidModi;
             Vector3 stanceModifer = GetRifleStancePIDModifier();
 
             bool isCantedAiming = IsCantedAiming(pwa, false);
@@ -1193,53 +1220,27 @@ namespace RealismMod
 
             if (!IsAiming) 
             {
-                float baseXTarget = BaseWeaponOffsetPosition.x + PluginConfig.WeapOffset.Value.x;
-                _gunXTarget = isDoingLeftStance ? PluginConfig.LeftShoulderOffset.Value + baseXTarget : baseXTarget;
+                _gunXTarget = BaseWeaponOffsetPosition.x + PluginConfig.WeapOffset.Value.x;
                 _gunYTarget = BaseWeaponOffsetPosition.y + PluginConfig.WeapOffset.Value.y;
                 _gunZTarget = BaseWeaponOffsetPosition.z + PluginConfig.WeapOffset.Value.z;
             }
 
-            //this is all for left stance
-            /*      if (!Utils.AreFloatsEqual(_currentRifleXPos, xTarget, 0.05f))
-                  {
-                      zTarget += 0.08f;
-                      yTarget += 0.05f;
-                      _leftStanceAnimationTimer += dt * 3f * stanceFactor;
-                      _leftStanceAnimSpeed = _smoothCurve.Evaluate(_leftStanceAnimationTimer);
-                  }
-                  else
-                  {
-                      zTarget = BaseWeaponOffsetPosition.z;
-                      _leftStanceAnimationTimer = 0f;
-                      _leftStanceAnimSpeed = 1f;
-                  }*/
+            CheckLeftShoulder(player, fc, pwa, stanceMulti, dt, _leftStanceRiflePositionTarget, _leftStanceRifleRotaitonTarget, stanceMulti * 4.5f);
 
-            /*            if (!Utils.AreFloatsEqual(_currentRifleXPos, xTarget, 0.045f))
-                        {
-                            rotationSpeed = 2.1f * stanceFactor * _leftStanceAnimSpeed * dt;
-                            stanceRotation = Quaternion.Euler(new Vector3(-50f, 150f * (IsLeftShoulder ? 1f : -1f), -40f * (IsLeftShoulder ? 1f : -1f)) * 0.2f);
-                            DoLeftShoulderTransition = true;
-                        }
-                        else if (DoLeftShoulderTransition)
-                        {
-                            DoLeftShoulderTransition = false;
-                            DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-2f, 2f, 10f) * movementFactor, true);
-                        }*/
-
-            if (!isDoingLeftStance)
+            if (PluginConfig.EnableAltRifle.Value && Plugin.FOVFixPresent)
             {
-                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunXTarget, ref _gunCameraAlignmentTargetX, camTarget.x, 0.3f * posResetSpeed * stanceModifer.x, 0.0001f);
-                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunYTarget, ref _gunCameraAlignmentTargetY, camTarget.y, 0.3f * posResetSpeed * stanceModifer.y, 0.0001f);
-                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunZTarget, ref _gunCameraAlignmentTargetZ, camTarget.z, 0.3f * posResetSpeed * stanceModifer.z, 0.0001f);
+                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunXTarget, ref _gunCameraAlignmentTargetX, camTarget.x, 0.3f * pidSpeed * stanceModifer.x, 0.0001f);
+                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunYTarget, ref _gunCameraAlignmentTargetY, camTarget.y, 0.3f * pidSpeed * stanceModifer.y, 0.0001f, true);
+                MoveGunToCameraPID(pwa, dt, WeaponStats.TotalFinalAimSpeed, ref _gunZTarget, ref _gunCameraAlignmentTargetZ, camTarget.z, 0.3f * pidSpeed * stanceModifer.z, 0.0001f, true);
             }
+          
+            _currentRifleXPos = Mathf.Lerp(_currentRifleXPos, _gunXTarget, dt * posSpeed);
+            _currentRifleYPos = Mathf.Lerp(_currentRifleYPos, _gunYTarget, dt * posSpeed); //if trying to fix stance ADS, animspeed might be fucking with things
+            _currentRifleZPos = Mathf.Lerp(_currentRifleZPos, _gunZTarget, dt * posSpeed);
 
-            _currentRifleXPos = Mathf.Lerp(_currentRifleXPos, _gunXTarget, dt * posLerpSpeed);
-            _currentRifleYPos = Mathf.Lerp(_currentRifleYPos, _gunYTarget, dt * posLerpSpeed); //if trying to fix stance ADS, animspeed might be fucking with things
-            _currentRifleZPos = Mathf.Lerp(_currentRifleZPos, _gunZTarget, dt * posLerpSpeed);
-
-            _rifleLocalPosition.x = _currentRifleXPos;
-            _rifleLocalPosition.y = _currentRifleYPos;
-            _rifleLocalPosition.z = _currentRifleZPos;
+            _rifleLocalPosition.x = _currentRifleXPos + _leftStancePosition.x;
+            _rifleLocalPosition.y = _currentRifleYPos + _leftStancePosition.y;
+            _rifleLocalPosition.z = _currentRifleZPos + _leftStancePosition.z;
 
             pwa.HandsContainer.WeaponRoot.localPosition = _rifleLocalPosition;
         }
@@ -1273,10 +1274,7 @@ namespace RealismMod
             Quaternion pistolMiniTargetQuaternion = Quaternion.Euler(PluginConfig.PistolAdditionalRotation.Value);
 
             //I've no idea wtf is going on here but it sort of works
-            if (!WeaponStats.HasShoulderContact && PluginConfig.EnableAltPistol.Value)
-            {
-                HandleAltPistolPosition(player, fc, pwa, stanceMulti, dt, camTarget);
-            }
+            HandleAltPistolPosition(player, fc, pwa, stanceMulti, dt, camTarget);
 
             if (CurrentStance == EStance.PatrolStance) return;
 
@@ -1368,9 +1366,9 @@ namespace RealismMod
             WiggleReturnSpeed = (1f - (PlayerState.AimSkillADSBuff * 0.5f)) * wiggleErgoMulti * PlayerState.StanceInjuryMulti * stocklessModifier * playerWeightFactor * (Mathf.Max(PlayerState.RemainingArmStamFactor, 0.55f));
           
             //for setting baseline position
-            if (!isThirdPerson) // && !pwa.LeftStance && !IsBlindFiring
+            if (!isThirdPerson)
             {
-                HandleRiflePosition(player, fc, pwa, movementFactor, dt, camTarget);
+                HandleRiflePosition(player, fc, pwa, stanceMulti, movementFactor, dt, camTarget);
             }
 
             DoTacSprint(fc, player);
@@ -1863,8 +1861,99 @@ namespace RealismMod
 
         public static void DoMeleeStance(Player player, Player.FirearmController fc, bool isThirdPerson, EFT.Animations.ProceduralWeaponAnimation pwa, float dt, bool useThirdPersonStance, float stanceMulti, float resetErgoMulti, bool pauseStance, float movementFactor)
         {
+            if (WeaponStats.HasBayonet)
+            {
+                DoMeleeStanceBayonet(player, fc, isThirdPerson, pwa, dt, useThirdPersonStance, stanceMulti, resetErgoMulti, pauseStance, movementFactor);
+                return;
+            }
+
             bool isDoingMelee = CurrentStance == EStance.Melee && !pwa.IsAiming && !pauseStance;
-            _isHoldingBackMelee = Input.GetKey(PluginConfig.MeleeKeybind.Value.MainKey) && WeaponStats.HasBayonet && !MeleeHitSomething && isDoingMelee;
+
+            Quaternion meleeInitialQuaternion = Quaternion.Euler(new Vector3(2.5f * resetErgoMulti, -15f * resetErgoMulti, -1f));
+            Quaternion meleeFinalQuaternion = Quaternion.Euler(new Vector3(-1.5f * resetErgoMulti, -7.5f * resetErgoMulti, -0.5f));
+            Vector3 meleeInitialPos = new Vector3(0f, 0.06f, 0f);
+            Vector3 meleeFinalPos = new Vector3(0f, -0.0275f, 0f);
+
+            ////Melee////
+            if (isDoingMelee && !PlayerState.IsSprinting)
+            {
+                IsResettingMelee = false;
+                HasResetMelee = false;
+                HasResetActiveAim = true;
+                HasResetHighReady = true;
+                HasResetLowReady = true;
+                HasResetShortStock = true;
+
+                if (StanceTargetPosition == meleeFinalPos && StanceBlender.Value >= 1f && !CanResetDamping)
+                {
+                    DoDampingTimer = true;
+                }
+                else if (StanceTargetPosition != meleeFinalPos || StanceBlender.Value < 1)
+                {
+                    CanResetDamping = false;
+                }
+
+                StanceRotationSpeed = 10f * Mathf.Clamp(stanceMulti, 0.8f, 1f) * dt * (useThirdPersonStance ? PluginConfig.ThirdPersonRotationSpeed.Value : 1f);
+
+                float initialPosDistance = Vector3.Distance(StanceTargetPosition, meleeInitialPos);
+                float finalPosDistance = Vector3.Distance(StanceTargetPosition, meleeFinalPos);
+
+                if (initialPosDistance > 0.001f && !DidHalfMeleeAnim)
+                {
+                    StanceRotation = meleeInitialQuaternion;
+                    StanceTargetPosition = Vector3.Lerp(StanceTargetPosition, meleeInitialPos, PluginConfig.StanceTransitionSpeedMulti.Value * Mathf.Clamp(stanceMulti, 0.75f, 1f) * dt * 1.5f * ChonkerFactor);
+                }
+                else
+                {
+                    DidHalfMeleeAnim = true;
+                    StanceRotation = meleeFinalQuaternion;
+                    StanceTargetPosition = Vector3.Lerp(StanceTargetPosition, meleeFinalPos, PluginConfig.StanceTransitionSpeedMulti.Value * Mathf.Clamp(stanceMulti, 0.75f, 1f) * dt * 2f * ChonkerFactor);
+                }
+                if (StanceBlender.Value >= 1f && finalPosDistance <= 0.001f && !DidStanceWiggle)
+                {
+                    DoMeleeEffect();
+                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 3f);
+                    DidStanceWiggle = true;
+                }
+
+                if (StanceBlender.Value >= 0.9f && DidHalfMeleeAnim)
+                {
+                    CanDoMeleeDetection = true;
+                }
+
+                if (StanceBlender.Value >= 1f && finalPosDistance <= 0.001f)
+                {
+                    CurrentStance = StoredStance;
+                    StanceBlender.Target = 0f;
+                }
+            }
+            else if (StanceBlender.Value > 0f && !HasResetMelee) //&& !IsLowReady && !IsActiveAiming && !IsHighReady && !IsShortStock && !isResettingActiveAim && !isResettingHighReady && !isResettingLowReady && !isResettingShortStock
+            {
+                CanDoMeleeDetection = false;
+                CanResetDamping = false;
+                IsResettingMelee = true;
+                StanceRotationSpeed = 10f * stanceMulti * dt;
+                StanceRotation = Quaternion.identity;
+                StanceBlender.Speed = 15f * stanceMulti * (useThirdPersonStance ? PluginConfig.ThirdPersonPositionSpeed.Value : 1f);
+            }
+            else if (StanceBlender.Value == 0f && !HasResetMelee)
+            {
+                _doMeleeReset = true;
+                if (!CanResetDamping)
+                {
+                    DoDampingTimer = true;
+                }
+                StanceRotation = Quaternion.identity;
+                IsResettingMelee = false;
+                HasResetMelee = true;
+                DidHalfMeleeAnim = false;
+            }
+        }
+
+        public static void DoMeleeStanceBayonet(Player player, Player.FirearmController fc, bool isThirdPerson, EFT.Animations.ProceduralWeaponAnimation pwa, float dt, bool useThirdPersonStance, float stanceMulti, float resetErgoMulti, bool pauseStance, float movementFactor)
+        {
+            bool isDoingMelee = CurrentStance == EStance.Melee && !pwa.IsAiming && !pauseStance;
+            _isHoldingBackMelee = Input.GetKey(PluginConfig.MeleeKeybind.Value.MainKey) && !MeleeHitSomething && isDoingMelee;
 
             Quaternion meleeInitialQuaternion = Quaternion.Euler(new Vector3(2.5f * resetErgoMulti, -15f * resetErgoMulti, -1f));
             Quaternion meleeFinalQuaternion = Quaternion.Euler(new Vector3(-1.5f * resetErgoMulti, -7.5f * resetErgoMulti, -0.5f));
@@ -1914,7 +2003,7 @@ namespace RealismMod
                 if (StanceBlender.Value >= 0.9f && !DidStanceWiggle && !MeleeHitSomething && !_isHoldingBackMelee) // && finalPosDistance <= 0.001f
                 {
                     DoMeleeEffect();
-                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 1.5f);
+                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 3f);
                     DidStanceWiggle = true;
                 }
 
@@ -1929,7 +2018,7 @@ namespace RealismMod
                     StanceBlender.Target = 0f;
                 }
             }
-            else if (StanceBlender.Value > 0f && !HasResetMelee) //&& !IsLowReady && !IsActiveAiming && !IsHighReady && !IsShortStock && !isResettingActiveAim && !isResettingHighReady && !isResettingLowReady && !isResettingShortStock
+            else if (StanceBlender.Value > 0f && !HasResetMelee) 
             {
                 CanDoMeleeDetection = false;
                 CanResetDamping = false;

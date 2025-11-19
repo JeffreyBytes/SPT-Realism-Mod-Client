@@ -70,7 +70,7 @@ namespace RealismMod
                 yield return null;
             }
 
-            Instantiate(Plugin.ExplosionGO, new Vector3(-700f, 3f, -1000f), new Quaternion(0, 0, 0, 0));
+            Instantiate(Plugin.ExplosionGO, new Vector3(-350f, 3f, -500f), new Quaternion(0, 0, 0, 0));
         }
     }
 

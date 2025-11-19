@@ -213,6 +213,7 @@ namespace RealismMod
                     return false;
                 }
                 PlayerState.TriedToADSFromSprint = false;
+
                 return gearFactorEnabled ? PlayerState.IsAllowedADS : true;
             }
             return true;

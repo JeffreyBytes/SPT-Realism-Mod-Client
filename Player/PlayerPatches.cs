@@ -472,7 +472,7 @@ namespace RealismMod
                         player.method_64(EAudioMovementState.Sprint, false);
                         currentSufrace.SprintSoundBank.Play(___NestedStepSoundSource, EnvironmentType.Outdoor, player.Distance, volume, player.Distance, player.FirstPersonPointOfView, true);
                         ____specificStepAudioController.Play(EAudioMovementState.Sprint, player.Environment, player.Distance, volume, player.Distance, player.FirstPersonPointOfView);
-                        player.method_58(1f, false);
+                        player.method_58(1.1f, false);
                         if (stepTime < 1.2f && player.FirstPersonPointOfView)
                         {
                             player.ProceduralWeaponAnimation.Walk.StepFrequency = 0.5f / Mathf.Clamp(stepTime, 0.3f, 0.8f);

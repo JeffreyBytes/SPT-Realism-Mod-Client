@@ -1381,7 +1381,7 @@ namespace RealismMod
                     StanceController.CurrentStance == EStance.ShortStock ||
                     StanceController.CurrentStance == EStance.ActiveAiming || 
                     StanceController.CurrentStance == EStance.Melee ||
-                    StanceController.DoLeftShoulderTransition;
+                    StanceController.IsLeftShoulder;
                 bool isInShootableStance = 
                     StanceController.CurrentStance == EStance.ShortStock || 
                     StanceController.CurrentStance == EStance.ActiveAiming ||
