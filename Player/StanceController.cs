@@ -726,7 +726,7 @@ namespace RealismMod
 
         public static void ToggleLeftShoulder()
         {
-            Utils.GetYourPlayer().method_58(3f, true);
+            Utils.GetYourPlayer().method_58(2.5f, true);
             IsLeftShoulder = !IsLeftShoulder;
             if (!TreatWeaponAsPistolStance)
             {
@@ -756,7 +756,7 @@ namespace RealismMod
                 //patrol
                 if (!ShouldBlockAllStances && Input.GetKeyDown(PluginConfig.PatrolKeybind.Value.MainKey) && PluginConfig.PatrolKeybind.Value.Modifiers.All(Input.GetKey))
                 {
-                    Utils.GetYourPlayer().method_58(3f, true);
+                    Utils.GetYourPlayer().method_58(2.5f, true);
                     ToggleStance(EStance.PatrolStance);
                     StoredStance = EStance.None;
                     StanceBlender.Target = 0f;
@@ -989,7 +989,7 @@ namespace RealismMod
             }
         }
 
-        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 3f, float wiggleFactor = 1f, bool isADS = false)
+        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 2.5f, float wiggleFactor = 1f, bool isADS = false)
         {
             if (playSound)
             {
@@ -1145,12 +1145,10 @@ namespace RealismMod
 
             if (IsAiming && (isTransitionignLeft || isTransitioningRight))
             {
-                Utils.Logger.LogWarning($"//InterruptAim");
                 InterruptAim(fc);
             } 
             if (!isTransitionignLeft && !isTransitioningRight)
             {
-                Utils.Logger.LogWarning($"==UnInterruptAim");
                 UnInterruptAim(fc);
             }
 

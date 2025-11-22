@@ -133,11 +133,12 @@ namespace RealismMod.Audio
     public class RealismAudioController : MonoBehaviour
     {
         private Player _Player;
-        private AudioSource _foodPoisoningSfx;
+        private AudioSource _foodPoisoningSource;
         private AudioSource _gasMaskAudioSource;
         private AudioSource _gasAnalyserSource;
         private AudioSource _geigerAudioSource;
         private AudioSource _toggleDeviceSource;
+        private AudioSource _heartBeatSource;
 
         public Dictionary<string, AudioClip> HitAudioClips = new Dictionary<string, AudioClip>();
         public Dictionary<string, AudioClip> GasMaskAudioClips = new Dictionary<string, AudioClip>();
@@ -148,6 +149,7 @@ namespace RealismMod.Audio
         public Dictionary<string, AudioClip> GasEventLongAudioClips = new Dictionary<string, AudioClip>();
         public Dictionary<string, AudioClip> InteractableClips = new Dictionary<string, AudioClip>();
         public Dictionary<string, AudioClip> FoodPoisoningSfx = new Dictionary<string, AudioClip>();
+        public Dictionary<string, AudioClip> HeartbeatSfx = new Dictionary<string, AudioClip>();
 
         private const float GAS_DELAY = 4f;
         private const float RAD_DELAY = 3f;
@@ -155,6 +157,8 @@ namespace RealismMod.Audio
         private const float GEIGER_VOLUME = 0.32f;
         private const float BASE_BREATH_VOLUME = 0.3f;
         private const float TOGGLE_DEVICE_VOLUME = 0.6f;
+        private const float HEARTBEAT_TENSE_VOLUME = 0.5f;
+        private const float HEARTBEAT_TENSE_FADE_SPEED = 0.001f;
 
         public bool ClipsAreReady = false;
 
@@ -170,6 +174,7 @@ namespace RealismMod.Audio
         private float _gasDeviceTimer = 0f;
         private float _currentGeigerClipLength = 0f;
         private float _geigerDeviceTimer = 0f;
+        private float _heartBeatSfxVolModi = 1f;
 
         void Start()
         {
@@ -177,13 +182,15 @@ namespace RealismMod.Audio
             _gasAnalyserSource = gameObject.AddComponent<AudioSource>();
             _geigerAudioSource = gameObject.AddComponent<AudioSource>();
             _toggleDeviceSource = gameObject.AddComponent<AudioSource>();
-            _foodPoisoningSfx = gameObject.AddComponent<AudioSource>();
+            _foodPoisoningSource = gameObject.AddComponent<AudioSource>();
+            _heartBeatSource = gameObject.AddComponent<AudioSource>();
 
             SetUpAudio(_gasMaskAudioSource, 1f, 0f);
             SetUpAudio(_gasAnalyserSource, 1f, 1f);
             SetUpAudio(_geigerAudioSource, 1f, 1f);
             SetUpAudio(_toggleDeviceSource, TOGGLE_DEVICE_VOLUME, 0.37f);
-            SetUpAudio(_foodPoisoningSfx, 0.65f, 0f);
+            SetUpAudio(_foodPoisoningSource, 0.65f, 0f);
+            SetUpAudio(_heartBeatSource, 1f, 0f);
         }
 
         void Update()
@@ -192,38 +199,10 @@ namespace RealismMod.Audio
 
             transform.position = _Player.gameObject.transform.position;
 
-            _breathTimer += Time.deltaTime;
-            _coughTimer += Time.deltaTime;
-
-            if (GearController.HasGasMask && _breathCountdown > 0f)
-            {
-                _breathCountdown -= Time.deltaTime;
-            }
-            else
-            {
-                _breathCountdown = 2.5f;
-            }
-
-            if (_breathTimer > _currentBreathClipLength && _breathCountdown <= 0f && GearController.HasGasMask)
-            {
-                bool isNotBusy = !_Player.Speaker.Busy || !_Player.Speaker.Speaking;
-                if (isNotBusy)
-                {
-                    PlayGasMaskBreathing(_breathedOut);
-                    _breathTimer = 0f;
-                    _breathedOut = !_breathedOut;
-                }
-            }
-
-            if (_coughTimer > 5f)
-            {
-                CoughController();
-                _coughTimer = 0f;
-            }
-
+            DoHeartBeatSfx();
+            DoBreathSfx();
             DoGasAnalyserAudio();
             DoGeigerAudio();
-
         }
 
         private async Task LoadAudioClipHelper(string[] fileDirectories, Dictionary<string, AudioClip> clips)
@@ -282,6 +261,7 @@ namespace RealismMod.Audio
             string[] gasEventLongAmbient = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + "\\BepInEx\\plugins\\Realism\\sounds\\zones\\mapgas\\long");
             string[] foodPoisoning = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + "\\BepInEx\\plugins\\Realism\\sounds\\health\\foodpoisoning");
             string[] interactable = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + "\\BepInEx\\plugins\\Realism\\sounds\\zones\\interactable");
+            string[] heartbeat = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory + "\\BepInEx\\plugins\\Realism\\sounds\\health\\heartbeat");
 
             HitAudioClips.Clear();
             GasMaskAudioClips.Clear();
@@ -291,6 +271,7 @@ namespace RealismMod.Audio
             RadEventAudioClips.Clear();
             InteractableClips.Clear();
             FoodPoisoningSfx.Clear();
+            HeartbeatSfx.Clear();
 
             await LoadAudioClipHelper(hitSoundsDir, HitAudioClips);
             await LoadAudioClipHelper(gasMaskDir, GasMaskAudioClips);
@@ -300,6 +281,7 @@ namespace RealismMod.Audio
             await LoadAudioClipHelper(radEventAmbient, RadEventAudioClips);
             await LoadAudioClipHelper(gasEventLongAmbient, GasEventLongAudioClips);
             await LoadAudioClipHelper(foodPoisoning, FoodPoisoningSfx);
+            await LoadAudioClipHelper(heartbeat, HeartbeatSfx);
             await LoadAudioClipHelper(interactable, InteractableClips);
         }
 
@@ -317,11 +299,74 @@ namespace RealismMod.Audio
             source.maxDistance = maxDistance;
         }
 
+        private void DoHeartBeatSfx()
+        {
+            bool doHeartbeat = Plugin.RealHealthController.HasPositiveAdrenalineEffect || Plugin.RealHealthController.HasNegativeAdrenalineEffect;
+            if (Plugin.RealHealthController.HasPositiveAdrenalineEffect)
+            {
+                _heartBeatSfxVolModi = HEARTBEAT_TENSE_VOLUME;
+            }
+            else if (Plugin.RealHealthController.HasNegativeAdrenalineEffect)
+            {
+                _heartBeatSfxVolModi = Mathf.Lerp(_heartBeatSfxVolModi, 0f, HEARTBEAT_TENSE_FADE_SPEED);
+            }
+            else
+            {
+                _heartBeatSfxVolModi = 0f;
+            }
+
+            if (_heartBeatSource != null) 
+            {
+                if (!_heartBeatSource.isPlaying && doHeartbeat)
+                {
+                    _heartBeatSource.clip = HeartbeatSfx["heartbeat-tense.wav"];
+                    _heartBeatSource.volume = _heartBeatSfxVolModi * GameWorldController.GetGameVolumeAsFactor();
+                    _heartBeatSource.Play();
+                }
+                if (!doHeartbeat)
+                {
+                    _heartBeatSource.Stop();
+                }
+            }
+        }
+
+        private void DoBreathSfx() 
+        {
+            _breathTimer += Time.deltaTime;
+            _coughTimer += Time.deltaTime;
+
+            if (GearController.HasGasMask && _breathCountdown > 0f)
+            {
+                _breathCountdown -= Time.deltaTime;
+            }
+            else
+            {
+                _breathCountdown = 2.5f;
+            }
+
+            if (_breathTimer > _currentBreathClipLength && _breathCountdown <= 0f && GearController.HasGasMask)
+            {
+                bool isNotBusy = !_Player.Speaker.Busy || !_Player.Speaker.Speaking;
+                if (isNotBusy)
+                {
+                    PlayGasMaskBreathing(_breathedOut);
+                    _breathTimer = 0f;
+                    _breathedOut = !_breathedOut;
+                }
+            }
+
+            if (_coughTimer > 5f)
+            {
+                CoughController();
+                _coughTimer = 0f;
+            }
+        }
+
         public void PlayFoodPoisoningSFXInRaid(float vol = 0.5f)
         {
-            _foodPoisoningSfx.clip = FoodPoisoningSfx.RandomElement().Value;
-            _foodPoisoningSfx.volume = vol * GameWorldController.GetGameVolumeAsFactor();
-            _foodPoisoningSfx.Play();
+            _foodPoisoningSource.clip = FoodPoisoningSfx.RandomElement().Value;
+            _foodPoisoningSource.volume = vol * GameWorldController.GetGameVolumeAsFactor();
+            _foodPoisoningSource.Play();
         }
 
         private void CoughController()

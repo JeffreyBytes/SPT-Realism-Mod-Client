@@ -137,6 +137,7 @@ namespace RealismMod
             if (instance?.Sound?.Settings == null) return 1f;
             return instance.Sound.Settings.OverallVolume?.Value * 0.1f ?? 1f;
         }
+
         public static void RandomizeLootResources(Item item) 
         {
             if (Plugin.ServerConfig.bot_loot_changes)
