@@ -10,6 +10,9 @@ namespace RealismMod
 {
     public class ShootController
     {
+
+        private const float FPS_SMOOTHING_FACTOR = 0.42f;
+
         public static Vector2 RecoilRotation { get { return _currentRotation; } }
         public static bool IsFiring = false;
         public static bool IsFiringDeafen = false;
@@ -22,8 +25,6 @@ namespace RealismMod
         public static float DeafenResetTimer = 0.0f;
         public static float WiggleResetTimer = 0.0f;
         public static float MovementSpeedResetTimer = 0.0f;
-        private const float FpsFactor = 144f;
-        private const float FpsSmoothingFactor = 0.42f;
 
         public static float BaseTotalHRecoil;
         public static float BaseTotalVRecoil;
@@ -48,7 +49,6 @@ namespace RealismMod
         private static float _dispersionSpeed;
         private static float _convergenceMulti = 1f;
 
-
         private static AnimationCurve _convergenceCurve = new AnimationCurve(
          new Keyframe(0, 1f),
          new Keyframe(0.25f, 0.95f),
@@ -61,15 +61,13 @@ namespace RealismMod
          new Keyframe(2f, 0.5f)
         );
 
-        private static AnimationCurve _autoPistolConvergenceCurve = new AnimationCurve(
+        private static AnimationCurve _autoPistolIntensityCurve = new AnimationCurve(
         new Keyframe(0, 1f),
-        new Keyframe(0.05f, 3.5f),
-        new Keyframe(0.1f, 3f),
+        new Keyframe(0.05f, 2f),
+        new Keyframe(0.1f, 2.5f),
         new Keyframe(0.3f, 2.5f),
-        new Keyframe(0.5f, 2f),
-        new Keyframe(0.7f, 2.5f),
-        new Keyframe(0.9f, 2.25f),
-        new Keyframe(1.2f, 2f)
+        new Keyframe(0.5f, 2.5f),
+        new Keyframe(0.7f, 2f)
        );
 
 
@@ -178,11 +176,7 @@ namespace RealismMod
         public static void LerpRecoilRotation(Player player, bool isFiring)
         {
             float fpsFactor = 1f;
-            if (PluginConfig.UseFpsRecoilFactor.Value)
-            {
-                fpsFactor = Plugin.FPS >= 1f ? FpsFactor / Plugin.FPS : 1f;
-                fpsFactor = Mathf.Clamp(fpsFactor, 0.05f, 5f);
-            }
+            if (PluginConfig.UseFpsRecoilFactor.Value) fpsFactor = Utils.GetFPSFactor();
 
             float xRoation = !IsFiring ? 0f : Mathf.Lerp(-_targetRotation.x, _targetRotation.x, Mathf.PingPong(Time.time * _dispersionSpeed, 1f)) + _recoilAngle; //need angle and dispersionSpeed
             Vector2 newRotation = new Vector2(xRoation, _targetRotation.y);
@@ -191,23 +185,21 @@ namespace RealismMod
             player.Rotate(_currentRotation, false);
         }
 
-        private static float ShotConvergenceFactor()
+        private static float ShotConvergenceFactor(bool isAutoPistol)
         {
-            bool isAutoPistol = WeaponStats.IsPistol && WeaponStats.FireMode == Weapon.EFireMode.fullauto;
-            return isAutoPistol ? _autoPistolConvergenceCurve.Evaluate(FiringDuration) : _convergenceCurve.Evaluate(FiringDuration);
+            return isAutoPistol ? _autoPistolIntensityCurve.Evaluate(FiringDuration) : _convergenceCurve.Evaluate(FiringDuration);
         }
-
 
         public static void UpdateConvergence(FirearmController fc, Player player)
         {
             bool isAutoPistol = WeaponStats.IsPistol && WeaponStats.FireMode == Weapon.EFireMode.fullauto;
-            _convergenceMulti = fc.autoFireOn ? ShotConvergenceFactor() : 1f;
+            _convergenceMulti = fc.autoFireOn ? ShotConvergenceFactor(isAutoPistol) : 1f;
             float stanceFactor = player.IsInPronePose ? 0.75f : 1f;
             FactoredTotalConvergence = BaseTotalConvergence * stanceFactor * _convergenceMulti;
             player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.ReturnSpeed = FactoredTotalConvergence;
         }
 
-        public static void DoVisualRecoil(ref Vector3 targetRecoil, ref Vector3 currentRecoil, ref Quaternion weapRotation)
+        public static void DoVisualRecoil(ref Quaternion weapRotation)
         {
             float cantedRecoilSpeed = Mathf.Clamp(BaseTotalConvergence * 0.95f, 9f, 16f);
 
@@ -218,15 +210,15 @@ namespace RealismMod
                 float additionalRecoilAmount = FactoredTotalDispersion / 16f;
                 float totalSideRecoil = Mathf.Lerp(-additionalRecoilAmount, additionalRecoilAmount, Mathf.PingPong(Time.time * cantedRecoilSpeed, 1.0f)) * 0.05f;
                 float totalVertical = Mathf.Lerp(-additionalRecoilAmount, additionalRecoilAmount, Mathf.PingPong(Time.time * cantedRecoilSpeed * 1.5f, 1.0f)) * 0.1f;
-                targetRecoil = new Vector3(totalVertical * 0.95f, totalCantedRecoil, totalSideRecoil * 0.89f) * PluginConfig.VisRecoilMulti.Value * WeaponStats.CurrentVisualRecoilMulti;
+                StanceController.TargetVisualRecoil = new Vector3(totalVertical * 0.95f, totalCantedRecoil, totalSideRecoil * 0.89f) * PluginConfig.VisRecoilMulti.Value * WeaponStats.CurrentVisualRecoilMulti;
             }
             else
             {
-                targetRecoil = Vector3.Lerp(targetRecoil, Vector3.zero, 0.1f);
+                StanceController.TargetVisualRecoil = Vector3.Lerp(StanceController.TargetVisualRecoil, Vector3.zero, 0.1f);
             }
 
-            currentRecoil = Vector3.Lerp(currentRecoil, targetRecoil, 1f);
-            Quaternion recoilQ = Quaternion.Euler(currentRecoil);
+            StanceController.CurrentVisualRecoil = Vector3.Lerp(StanceController.CurrentVisualRecoil, StanceController.TargetVisualRecoil, 1f);
+            Quaternion recoilQ = Quaternion.Euler(StanceController.CurrentVisualRecoil);
             weapRotation *= recoilQ;
         }
 
@@ -253,14 +245,15 @@ namespace RealismMod
             if (!Plugin.ServerConfig.recoil_attachment_overhaul) return;
             NewRecoilShotEffect newRecoil = pwa.Shootingg.CurrentRecoilEffect as NewRecoilShotEffect;
             bool hasOptic = WeaponStats.IsOptic && StanceController.IsAiming;
-            float shoulderContactFactor = weapon.WeapClass != "pistol" && !WeaponStats.HasShoulderContact ? 1.25f : WeaponStats.IsStockedPistol ? 0.85f : 1f;
+            float shoulderContactFactor = !WeaponStats.IsPistol && !WeaponStats.HasShoulderContact ? 1.25f : WeaponStats.IsStockedPistol ? 0.85f : 1f;
             float opticFactorRear = StanceController.IsAiming && hasOptic ? 0.9f : 1f;
             float opticFactorVert = StanceController.IsAiming && hasOptic ? 0.95f : 1f;
 
             newRecoil.HandRotationRecoil.CategoryIntensityMultiplier = weapon.Template.RecoilCategoryMultiplierHandRotation * PluginConfig.RecoilIntensity.Value * shoulderContactFactor;
 
             newRecoil.HandRotationRecoil.ReturnTrajectoryDumping = weapon.Template.RecoilReturnPathDampingHandRotation * opticFactorRear;
-            pwa.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping = weapon.Template.RecoilDampingHandRotation * PluginConfig.RecoilDampingMulti.Value * opticFactorVert;
+            float dampingMulti = WeaponStats.IsPistol ? PluginConfig.PistolRecoilDampingMulti.Value : PluginConfig.RiflRecoilDampingMulti.Value;
+            pwa.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping = weapon.Template.RecoilDampingHandRotation * dampingMulti * opticFactorVert;
 
             pwa.Shootingg.CurrentRecoilEffect.CameraRotationRecoilEffect.Damping = PluginConfig.CamWiggle.Value;
             pwa.Shootingg.CurrentRecoilEffect.CameraRotationRecoilEffect.ReturnSpeed = PluginConfig.CamReturn.Value;

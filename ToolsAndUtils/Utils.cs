@@ -32,6 +32,8 @@ namespace RealismMod
 
     public static class Utils
     {
+        private const float FPS_BASELINE = 144f;
+
         public const string GAMU_ID = "66fd571a05370c3ee1a1c613";
         public const string RAMU_ID = "66fd521442055447e2304fda";
         public const string GAMU_DATA_ID = "670120df4f0c4c37e6be90ae";
@@ -70,6 +72,12 @@ namespace RealismMod
         public static string TacticalCombo = "55818b164bdc2ddc698b456c";
         public static string UBGL = "55818b014bdc2ddc698b456b";
 
+        public static float GetFPSFactor() 
+        {
+            float fpsFactor = Plugin.FPS >= 1f ? FPS_BASELINE / Plugin.FPS : 1f;
+            fpsFactor = Mathf.Clamp(fpsFactor, 0.05f, 5f);
+            return fpsFactor;
+        }
 
         public static bool IPlayerMatches(IPlayer x)
         {

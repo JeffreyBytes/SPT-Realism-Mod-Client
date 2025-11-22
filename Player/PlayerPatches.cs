@@ -1,4 +1,5 @@
 ﻿using Comfort.Common;
+using CommonAssets.Scripts.Audio;
 using EFT;
 using EFT.Animations;
 using EFT.Animations.NewRecoil;
@@ -403,11 +404,12 @@ namespace RealismMod
 
             if (StanceController.CanResetDamping)
             {
+                float dampingMulti = WeaponStats.IsPistol ? PluginConfig.PistolRecoilDampingMulti.Value : PluginConfig.RiflRecoilDampingMulti.Value;
                 float stockedPistolFactor = WeaponStats.IsStockedPistol ? 0.75f : 1f;
                 NewRecoilShotEffect newRecoil = player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect as NewRecoilShotEffect;
                 newRecoil.HandRotationRecoil.CategoryIntensityMultiplier = Mathf.Lerp(newRecoil.HandRotationRecoil.CategoryIntensityMultiplier, fc.Weapon.Template.RecoilCategoryMultiplierHandRotation * PluginConfig.RecoilIntensity.Value * stockedPistolFactor, 0.01f);
                 newRecoil.HandRotationRecoil.ReturnTrajectoryDumping = Mathf.Lerp(newRecoil.HandRotationRecoil.ReturnTrajectoryDumping, fc.Weapon.Template.RecoilReturnPathDampingHandRotation, 0.01f);
-                player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping = Mathf.Lerp(player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping, fc.Weapon.Template.RecoilDampingHandRotation * PluginConfig.RecoilDampingMulti.Value, 0.01f);
+                player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping = Mathf.Lerp(player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.Damping, fc.Weapon.Template.RecoilDampingHandRotation * dampingMulti, 0.01f);
                 player.ProceduralWeaponAnimation.HandsContainer.HandsPosition.Damping = Mathf.Lerp(player.ProceduralWeaponAnimation.HandsContainer.HandsPosition.Damping, 0.41f, 0.01f);
                 player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.ReturnSpeed = Mathf.Lerp(player.ProceduralWeaponAnimation.Shootingg.CurrentRecoilEffect.HandRotationRecoilEffect.ReturnSpeed, ShootController.BaseTotalConvergence, 0.01f);
             }
@@ -436,6 +438,47 @@ namespace RealismMod
                 fc.SetAnimatorAndProceduralValues();
                 Plugin.StartRechamberTimer = false;
                 Plugin.ChamberTimer = 0f;
+            }
+        }
+
+        //needed for bayonet charge, since sprint animation dicatates sfx normally
+        //this needs moving to an audio controller, and use AccessTools instead for performance
+        private static void PlaySprintSfx(
+            Player player, 
+            ref float ____lastStepTime, 
+            BetterSource ___NestedStepSoundSource, 
+            float ____sprintSurfaceCheck,
+            ref bool ____playedAtLeastOneStep,
+            GInterface86 ____specificStepAudioController,
+            ref float ____sign) 
+        {
+            if (Math.Abs(____sign - player.Single_0) >= 1E-45f) 
+            {
+                ____sign = player.Single_0;
+                float stepTime = Time.time - ____lastStepTime;
+                if (stepTime > 0.2f && player.MovementContext.FreefallTime < 0.6f)
+                {
+                    ____playedAtLeastOneStep = true;
+                    ____lastStepTime = Time.time;
+                    player.method_63(___NestedStepSoundSource);
+                    if (player.CheckSurface(____sprintSurfaceCheck))
+                    {
+                        var currentSufrace = (SurfaceSet)surfaceField.GetValue(player);
+                        player.UpdateMuffledState();
+                        SoundBank sprintSoundBank = currentSufrace.SprintSoundBank;
+                        float povVolumeModifier = player.FirstPersonPointOfView ? sprintSoundBank.BaseVolume : 1f;
+                        float weightFactor = 0.5f + 3f * player.Physical.Overweight;
+                        float volume = player.method_62(EAudioMovementState.Sprint) * povVolumeModifier * weightFactor;
+                        player.method_64(EAudioMovementState.Sprint, false);
+                        currentSufrace.SprintSoundBank.Play(___NestedStepSoundSource, EnvironmentType.Outdoor, player.Distance, volume, player.Distance, player.FirstPersonPointOfView, true);
+                        ____specificStepAudioController.Play(EAudioMovementState.Sprint, player.Environment, player.Distance, volume, player.Distance, player.FirstPersonPointOfView);
+                        player.method_58(1.1f, false);
+                        if (stepTime < 1.2f && player.FirstPersonPointOfView)
+                        {
+                            player.ProceduralWeaponAnimation.Walk.StepFrequency = 0.5f / Mathf.Clamp(stepTime, 0.3f, 0.8f);
+                        }
+                    }
+                }
             }
         }
 
@@ -522,7 +565,14 @@ namespace RealismMod
         }
   
         [PatchPostfix] 
-        private static void PatchPostfix(Player __instance)
+        private static void PatchPostfix(
+            Player __instance, 
+            ref float ____lastStepTime, 
+            BetterSource ___NestedStepSoundSource, 
+            float ____sprintSurfaceCheck,
+            ref bool ____playedAtLeastOneStep,
+            GInterface86 ____specificStepAudioController,
+            ref float ____sign)
         {
             if (Plugin.ServerConfig.headset_changes)
             {
@@ -535,6 +585,11 @@ namespace RealismMod
 
             if (Utils.PlayerIsReady && __instance.IsYourPlayer)
             {
+                if (PlayerState.IsSprinting && StanceController.CanDoMeleeDetection && WeaponStats.HasBayonet && StanceController.IsReadyForBayonetCharge) 
+                {
+                    PlaySprintSfx(__instance, ref ____lastStepTime, ___NestedStepSoundSource, ____sprintSurfaceCheck, ref ____playedAtLeastOneStep, ____specificStepAudioController, ref ____sign);
+                }
+
                 if (PluginConfig.EnableAnimationFixes.Value) SmoothenAnimations(__instance);
 
                 GameWorldController.TimeInRaid += Time.deltaTime;

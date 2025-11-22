@@ -135,15 +135,17 @@ namespace RealismMod
             }
         }
 
-        public static float FinalStatCalc(Weapon __instance, Gun weapStats)
+        public static float FinalStatCalc(Weapon __instance, Gun gunStats)
         {
+            WeaponStats.IsPistol = __instance.WeapClass == "pistol";
             WeaponStats._WeapClass = __instance.WeapClass;
-            WeaponStats._IsManuallyOperated = weapStats.IsManuallyOperated;
-            WeaponStats.EnableExtraBSGVisRecoil = weapStats.EnableExtraBSGVisRecoil;
+            WeaponStats._IsManuallyOperated = gunStats.IsManuallyOperated;
+            WeaponStats.EnableBSGVisRecoil = gunStats.EnableBSGVisRecoil;
+            WeaponStats.ReduceBSGVisRecoil = gunStats.ReduceBSGVisRecoil;
 
             float totalWeapWeight = __instance.TotalWeight;
-            string weapType = weapStats.WeapType;
-            string weapOpType = weapStats.OperationType;
+            string weapType = gunStats.WeapType;
+            string weapOpType = gunStats.OperationType;
 
             Mod magazine = __instance.GetCurrentMagazine();
             float magErgo = 0;
@@ -167,8 +169,8 @@ namespace RealismMod
 
             float totalChamberSpeedMod = WeaponStats.SDChamberSpeedModifier;
 
-            float recoilDamping = weapStats.RecoilDamping;
-            float recoilHandDamping = weapStats.RecoilHandDamping;
+            float recoilDamping = gunStats.RecoilDamping;
+            float recoilHandDamping = gunStats.RecoilHandDamping;
 
             float baseErgo = __instance.Template.Ergonomics;
             float ergoWeightFactor = StatCalc.WeightStatCalc(StatCalc.ErgoWeightMult, __instance.IsBeltMachineGun ? magWeight * 0.5f : magWeight) / 100;
@@ -211,7 +213,7 @@ namespace RealismMod
             float totalCOIDelta = 0f;
 
             StatCalc.WeaponStatCalc(
-                __instance, weapStats, currentTorque, ref totalTorque, currentErgo, currentVRecoil, currentHRecoil, currentDispersion, currentCamRecoil, currentRecoilAngle, 
+                __instance, gunStats, currentTorque, ref totalTorque, currentErgo, currentVRecoil, currentHRecoil, currentDispersion, currentCamRecoil, currentRecoilAngle, 
                 baseErgo, baseVRecoil, baseHRecoil, ref totalErgo, ref totalVRecoil, ref totalHRecoil, ref totalDispersion, ref totalCamRecoil, ref totalRecoilAngle, 
                 ref totalRecoilDamping, ref totalRecoilHandDamping, ref totalErgoDelta, ref totalVRecoilDelta, ref totalHRecoilDelta, ref recoilDamping, 
                 ref recoilHandDamping, WeaponStats.InitTotalCOI, WeaponStats.HasShoulderContact, ref totalCOI, ref totalCOIDelta, __instance.CenterOfImpactBase, 
@@ -231,7 +233,7 @@ namespace RealismMod
             float totalFixSpeed = 0;
 
             StatCalc.SpeedStatCalc(
-                __instance, weapStats, ergoFactor, ergoFactorLessMag, totalChamberSpeedMod, 
+                __instance, gunStats, ergoFactor, ergoFactorLessMag, totalChamberSpeedMod, 
                 totalReloadSpeedMod, ref totalReloadSpeedLessMag, ref totalChamberSpeed, 
                 ref totalAimMoveSpeedFactor, ref totalFiringChamberSpeed, ref totalChamberCheckSpeed,
                 ref totalFixSpeed);
@@ -284,19 +286,20 @@ namespace RealismMod
             WeaponStats.TotalRecoilHandDamping = totalRecoilHandDamping;
             WeaponStats.COIDelta = totalCOIDelta;
             WeaponStats.PureErgoDelta = totalPureErgoDelta;
-            WeaponStats.CurrentVisualRecoilMulti = weapStats.VisualMulti;
+            WeaponStats.CurrentVisualRecoilMulti = gunStats.VisualMulti;
             return totalErgoDelta;
         }
 
         public static void InitialStaCalc(Weapon __instance, Gun weapStats)
         {
+            WeaponStats.IsPistol = __instance.WeapClass == "pistol";
             WeaponStats._WeapClass = __instance.WeapClass;
             bool isManual = weapStats.IsManuallyOperated;
             WeaponStats._IsManuallyOperated = isManual;
             bool isChonker = __instance.IsBeltMachineGun || __instance.TotalWeight >= 10f;
 
             WeaponStats.ShouldGetSemiIncrease = false;
-            if (__instance.WeapClass != "pistol" || __instance.WeapClass != "shotgun" || __instance.WeapClass != "sniperRifle" || __instance.WeapClass != "smg")
+            if (!WeaponStats.IsPistol || __instance.WeapClass != "shotgun" || __instance.WeapClass != "sniperRifle" || __instance.WeapClass != "smg")
             {
                 WeaponStats.ShouldGetSemiIncrease = true;
             }
@@ -464,7 +467,6 @@ namespace RealismMod
                 WeaponStats.WeaponCanFSADS = !hasShoulderContact;
             }
 
-            WeaponStats.IsPistol = __instance.WeapClass == "pistol";
             WeaponStats.IsMachinePistol = weapType == "smg_pistol" && !hasShoulderContact;
             WeaponStats.IsStocklessPistol = !hasShoulderContact && WeaponStats.IsPistol;
             WeaponStats.IsStockedPistol = hasShoulderContact && WeaponStats.IsPistol;

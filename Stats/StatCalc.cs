@@ -137,9 +137,9 @@ namespace RealismMod
 
             pwa.UpdateSwayFactors();
 
-            aimSpeed = weapon.WeapClass == "pistol" ? aimSpeed * 1.35f : aimSpeed;
+            aimSpeed = WeaponStats.IsPistol ? aimSpeed * 1.35f : aimSpeed;
             WeaponStats.SightlessAimSpeed = aimSpeed;
-            WeaponStats.ErgoStanceSpeed = baseAimspeed * (1f + (skillsClass.AimSpeed * 0.5f)) * (weapon.WeapClass == "pistol" ? 1.4f : 1f);
+            WeaponStats.ErgoStanceSpeed = baseAimspeed * (1f + (skillsClass.AimSpeed * 0.5f)) * (WeaponStats.IsPistol ? 1.4f : 1f);
 
             AccessTools.Field(typeof(EFT.Animations.ProceduralWeaponAnimation), "_aimingSpeed").SetValue(pwa, aimSpeed);
 
@@ -257,7 +257,7 @@ namespace RealismMod
             totalTorque = weaponBaseTorque + currentTorque;
             float totalPistolErgoTorque = weaponBaseTorque + currentPistolErgoTorque;
 
-            float totalTorqueFactorErgo = weap.WeapClass == "pistol" ? totalPistolErgoTorque / 100f : totalTorque / 100f;
+            float totalTorqueFactorErgo = WeaponStats.IsPistol ? totalPistolErgoTorque / 100f : totalTorque / 100f;
             float totalTorqueFactor = totalTorque / 100f;
             float totalTorqueFactorInverse = totalTorque / -100f;
 
@@ -271,7 +271,7 @@ namespace RealismMod
             totalRecoilAngle = currentRecoilAngle + (currentRecoilAngle * (totalTorqueFactor * angleTorqueMulti));
             totalCOI = currentCOI + (currentCOI * (-weaponStats.WeapAccuracy / 100));
 
-            if (!hasShoulderContact && weap.WeapClass != "pistol")
+            if (!hasShoulderContact && !WeaponStats.IsPistol)
             {
                 totalPureErgo *= WeaponStats.FoldedErgoFactor;
                 totalErgo *= WeaponStats.FoldedErgoFactor;

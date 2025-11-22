@@ -48,7 +48,7 @@ namespace RealismMod.Weapons
             float magWeightFactor = (magWeight / -100f) + 1f;
             float magSpeed = weaponModStats.ReloadSpeed;
             float reloadSpeedModiLessMag = WeaponStats.TotalReloadSpeedLessMag;
-            float stockModifier = weapon.WeapClass != "pistol" && !WeaponStats.HasShoulderContact ? 0.8f : 1f;
+            float stockModifier = !WeaponStats.IsPistol && !WeaponStats.HasShoulderContact ? 0.8f : 1f;
             float playerWeightFactor = 1f - (PlayerState.TotalModifiedWeightMinusWeapon * 0.001f);
 
             float magSpeedMulti = (magSpeed / 100f) + 1f;
@@ -99,11 +99,12 @@ namespace RealismMod.Weapons
 
                 if (PlayerState.IsAttemptingToReloadInternalMag && Plugin.ServerConfig.reload_changes)
                 {
-                    StanceController.CancelHighReady = fc.Item.WeapClass != "shotgun" ? true : false;
-                    StanceController.CancelLowReady = fc.Item.WeapClass == "shotgun" || fc.Item.WeapClass == "pistol" ? true : false;
+                    bool isShotgun = fc.Item.WeapClass == "shotgun";
+                    StanceController.CancelHighReady = !isShotgun ? true : false;
+                    StanceController.CancelLowReady = isShotgun || WeaponStats.IsPistol ? true : false;
 
-                    float highReadyBonus = fc.Item.WeapClass == "shotgun" && StanceController.CurrentStance == EStance.HighReady == true ? StanceController.HighReadyManipBuff : 1f;
-                    float lowReadyBonus = fc.Item.WeapClass != "shotgun" && StanceController.CurrentStance == EStance.LowReady == true ? StanceController.LowReadyManipBuff : 1f;
+                    float highReadyBonus = isShotgun && StanceController.CurrentStance == EStance.HighReady == true ? StanceController.HighReadyManipBuff : 1f;
+                    float lowReadyBonus = !isShotgun && StanceController.CurrentStance == EStance.LowReady == true ? StanceController.LowReadyManipBuff : 1f;
 
                     float IntenralMagReloadSpeed = Mathf.Clamp(WeaponStats.CurrentMagReloadSpeed * PluginConfig.InternalMagReloadMulti.Value * PlayerState.ReloadSkillMulti * PlayerState.ReloadInjuryMulti * highReadyBonus * lowReadyBonus * PlayerState.RemainingArmStamReloadFactor, MinimumReloadSpeed, MaxInternalReloadSpeed);
                     player.HandsAnimator.SetAnimationSpeed(IntenralMagReloadSpeed);

@@ -72,7 +72,8 @@ namespace RealismMod
 
         public static bool _IsManuallyOperated = false;
 
-        public static bool EnableExtraBSGVisRecoil = true;
+        public static bool EnableBSGVisRecoil = true;
+        public static bool ReduceBSGVisRecoil = false;
 
         public static float TotalModDuraBurn = 1;
 
@@ -204,6 +205,8 @@ namespace RealismMod
         public static float GlobalAimSpeedModifier = 1f;
 
         public static float SightlessAimSpeed = 1f;
+
+        public static float TotalFinalAimSpeed = 1f;
 
         public static float ErgoStanceSpeed = 1f;
 

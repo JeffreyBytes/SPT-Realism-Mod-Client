@@ -202,8 +202,6 @@ namespace RealismMod
 
             if (player.IsYourPlayer)
             {
-
-
                 AimController.AimStateChanged = true;
                 bool gearFactorEnabled = PluginConfig.EnableFSPatch.Value || PluginConfig.EnableNVGPatch.Value;
 
@@ -215,6 +213,7 @@ namespace RealismMod
                     return false;
                 }
                 PlayerState.TriedToADSFromSprint = false;
+
                 return gearFactorEnabled ? PlayerState.IsAllowedADS : true;
             }
             return true;

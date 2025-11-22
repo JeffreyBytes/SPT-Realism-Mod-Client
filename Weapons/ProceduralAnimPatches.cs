@@ -147,6 +147,7 @@ namespace RealismMod
             if (player != null && player.IsYourPlayer && player.MovementContext.CurrentState.Name != EPlayerState.Stationary)
             {
                 StatCalc.UpdateAimParameters(firearmController, __instance);
+                __instance.Shootingg.CalculateRecoilParameters(); //force dispersion stat to update on folding weapon stock
             }
         }
     }
@@ -173,7 +174,7 @@ namespace RealismMod
 
                 if (pwa.IsAiming && !didAimWiggle)
                 {
-                    if (!StanceController.IsFiringFromStance) StanceController.DoWiggleEffects(player, pwa, fc.Weapon, wiggleDir, wiggleFactor: factor, isADS: true);
+                    if (!StanceController.IsFiringFromStance && !StanceController.IsLeftShoulder) StanceController.DoWiggleEffects(player, pwa, fc.Weapon, wiggleDir, wiggleFactor: factor, isADS: true);
                     didAimWiggle = true;
                 }
                 else if (!pwa.IsAiming && didAimWiggle)
@@ -222,21 +223,22 @@ namespace RealismMod
                         : StanceController.CurrentStance == EStance.HighReady || StanceController.CurrentStance == EStance.HighReady ? 1.25f 
                         : StanceController.StoredStance == EStance.LowReady || StanceController.CurrentStance == EStance.LowReady ? 1.25f 
                         : StanceController.IsLeftShoulder ? 0.85f : 1f;
-                    float stockMulti = weapon.WeapClass != "pistol" && !WeaponStats.HasShoulderContact ? 0.75f : 1f;
+                    float stockMulti = !WeaponStats.IsPistol && !WeaponStats.HasShoulderContact ? 0.75f : 1f;
 
                     float totalSightlessAimSpeed = WeaponStats.SightlessAimSpeed * PlayerState.ADSInjuryMulti * (Mathf.Max(PlayerState.RemainingArmStamFactor, 0.35f));
 
                     float sightSpeedModi = currentAimingMod != null ? aimingModStats.AimSpeed : 1f;
                     sightSpeedModi = currentAimingMod != null && (currentAimingMod.TemplateId == "5c07dd120db834001c39092d" || currentAimingMod.TemplateId == "5c0a2cec0db834001b7ce47d") && __instance.CurrentScope.IsOptic ? 1f : sightSpeedModi;
                     float totalSightedAimSpeed = Mathf.Clamp(totalSightlessAimSpeed * (1 + (sightSpeedModi / 100f)) * stanceMulti * stockMulti * playerWeightADSFactor, 0.4f, 1.5f);
-                   
-                    float newAimSpeed = Mathf.Max(totalSightedAimSpeed * PlayerState.ADSSprintMulti * Plugin.RealHealthController.AdrenalineADSBonus * (1f + WeaponStats.ModAimSpeedModifier), 0.28f) * (weapon.WeapClass == "pistol" ? PluginConfig.PistolGlobalAimSpeedModifier.Value : PluginConfig.GlobalAimSpeedModifier.Value);
+
+                    float newAimSpeed = Mathf.Max(totalSightedAimSpeed * PlayerState.ADSSprintMulti * Plugin.RealHealthController.AdrenalineADSBonus * (1f + WeaponStats.ModAimSpeedModifier), 0.28f) * (WeaponStats.IsPistol ? PluginConfig.PistolGlobalAimSpeedModifier.Value : PluginConfig.GlobalAimSpeedModifier.Value);
+                    WeaponStats.TotalFinalAimSpeed = newAimSpeed;
                     AccessTools.Field(typeof(EFT.Animations.ProceduralWeaponAnimation), "_aimingSpeed").SetValue(__instance, newAimSpeed); //aimspeed
 
                     float leftShoulderFactor = StanceController.IsLeftShoulder ? 1.3f : 1f;
                     float formfactor = WeaponStats.IsBullpup ? 0.7f : 1f;
                     float ergoWeight = WeaponStats.ErgoFactor * PlayerState.ErgoDeltaInjuryMulti * (1f - (PlayerState.StrengthSkillAimBuff * 1.75f)) * (1f + (1f - PlayerState.GearErgoPenalty));
-                    float ergoWeightFactor = StatCalc.ProceduralIntensityFactorCalc(weapon.TotalWeight, weapon.WeapClass == "pistol" ? 1f : 4f);
+                    float ergoWeightFactor = StatCalc.ProceduralIntensityFactorCalc(weapon.TotalWeight, WeaponStats.IsPistol ? 1f : 4f);
                     float playerWeightSwayFactor = 1f + (totalPlayerWeight / 200f);
                     float totalErgoFactor = 1f + ((ergoWeight * ergoWeightFactor * playerWeightSwayFactor * leftShoulderFactor) / 100f);
 
