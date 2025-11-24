@@ -388,7 +388,7 @@ namespace RealismMod
                     player.ProceduralWeaponAnimation.UpdateTacticalReload(); //gives better chamber animations
                     //player.MovementContext.PlayerAnimator.SetProneBipodMount(player.MovementContext.IsInPronePose && WeaponStats.BipodIsDeployed && value); //this causes camera to detatch from weapon, could be a good effect if I could get camera to follow it.
                     fc.FirearmsAnimator.SetMounted(value);
-                    //player.ProceduralWeaponAnimation.SetMountingData(value, BracingDirection == EBracingDirection.Top);
+                    //player.ProceduralWeaponAnimation.SetMountingData(value, BracingDirection != EBracingDirection.Top);
                 }
             }
         }
@@ -726,7 +726,7 @@ namespace RealismMod
 
         public static void ToggleLeftShoulder()
         {
-            Utils.GetYourPlayer().method_58(2.5f, true);
+            Utils.GetYourPlayer().method_58(5f, false);
             IsLeftShoulder = !IsLeftShoulder;
             if (!TreatWeaponAsPistolStance)
             {
@@ -756,7 +756,7 @@ namespace RealismMod
                 //patrol
                 if (!ShouldBlockAllStances && Input.GetKeyDown(PluginConfig.PatrolKeybind.Value.MainKey) && PluginConfig.PatrolKeybind.Value.Modifiers.All(Input.GetKey))
                 {
-                    Utils.GetYourPlayer().method_58(2.5f, true);
+                    Utils.GetYourPlayer().method_58(5f, false);
                     ToggleStance(EStance.PatrolStance);
                     StoredStance = EStance.None;
                     StanceBlender.Target = 0f;
@@ -989,11 +989,11 @@ namespace RealismMod
             }
         }
 
-        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 2.5f, float wiggleFactor = 1f, bool isADS = false)
+        public static void DoWiggleEffects(Player player, ProceduralWeaponAnimation pwa, Weapon weapon, Vector3 wiggleDirection, bool playSound = false, float volume = 4f, float wiggleFactor = 1f, bool isADS = false, bool useGearSound = false)
         {
             if (playSound)
             {
-                player.method_58(volume, true);
+                player.method_58(volume * PluginConfig.StanceSfxModifier.Value, useGearSound);
             }
 
             NewRecoilShotEffect newRecoil = pwa.Shootingg.CurrentRecoilEffect as NewRecoilShotEffect;
@@ -1827,7 +1827,7 @@ namespace RealismMod
 
                 if ((StanceBlender.Value >= 1f || StanceTargetPosition == activeAimTargetPosition) && !DidStanceWiggle && !useThirdPersonStance)
                 {
-                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-10f, -10f, 0f), true);
+                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-10f, -10f, 0f), true, 3f);
                     DidStanceWiggle = true;
                 }
             }
@@ -1847,7 +1847,7 @@ namespace RealismMod
                     DoDampingTimer = true;
                 }
 
-                if (!useThirdPersonStance) DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-5f, 1.5f, 0f) * movementFactor, true);
+                if (!useThirdPersonStance) DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-5f, 1.5f, 0f) * movementFactor, true, 3f);
                 DidStanceWiggle = false;
 
                 StanceRotation = Quaternion.identity;
@@ -1910,7 +1910,7 @@ namespace RealismMod
                 if (StanceBlender.Value >= 1f && finalPosDistance <= 0.001f && !DidStanceWiggle)
                 {
                     DoMeleeEffect();
-                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 3f);
+                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 1f, useGearSound: true);
                     DidStanceWiggle = true;
                 }
 
@@ -2001,7 +2001,7 @@ namespace RealismMod
                 if (StanceBlender.Value >= 0.9f && !DidStanceWiggle && !MeleeHitSomething && !_isHoldingBackMelee) // && finalPosDistance <= 0.001f
                 {
                     DoMeleeEffect();
-                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 3f);
+                    DoWiggleEffects(player, pwa, fc.Weapon, new Vector3(-20f, -10f, -90f) * movementFactor, true, 1f, useGearSound: true);
                     DidStanceWiggle = true;
                 }
 

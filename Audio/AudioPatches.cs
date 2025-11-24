@@ -18,7 +18,7 @@ using HeadsetTemplate = GClass2556; //SetCompressor*/
 
 namespace RealismMod.Audio
 {
-    //gunshot volume patch
+    //gunshot volume patch...no longer applies to bots
     public class GunshotVolumePatch : ModulePatch
     {
         protected override MethodBase GetTargetMethod()

@@ -561,10 +561,12 @@ namespace RealismMod
 
         private void LoadGeneralPatches()
         {
-/*            if (ServerConfig.spawn_waves)
-            {
-                new SpawnUpdatePatch().Enable(); //don't think this actually does anything, may cause issues?
-            }*/
+            new InitiateShotPatch().Enable();
+
+            /*            if (ServerConfig.spawn_waves)
+                        {
+                            new SpawnUpdatePatch().Enable(); //don't think this actually does anything, may cause issues?
+                        }*/
 
             //deafening + adrenaline trigger
             new FlyingBulletPatch().Enable();
@@ -804,7 +806,6 @@ namespace RealismMod
         {
             /*new SetSkinPatch().Enable();*/
             new PenetrationUIPatch().Enable();
-            new InitiateShotPatch().Enable();
             new VelocityPatch().Enable();
             new CreateShotPatch().Enable();
             new ApplyArmorDamagePatch().Enable();

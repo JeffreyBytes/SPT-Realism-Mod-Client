@@ -45,7 +45,7 @@ namespace RealismMod
 
         private static Vector3 CalculateRecoilBloom(float overHeatFactor) 
         {
-            if (ShootController.ShotCount <= 0) return Vector3.zero;
+            if (!Plugin.ServerConfig.recoil_attachment_overhaul || ShootController.ShotCount <= 0) return Vector3.zero;
             float baseBloom = ShootController.FactoredTotalDispersion * 0.0007f * Mathf.Pow(ShootController.ShotCount, 0.2f) * overHeatFactor;
             float horizontal = UnityEngine.Random.Range(-baseBloom, baseBloom);
             float vertical = UnityEngine.Random.Range(0f, baseBloom);
