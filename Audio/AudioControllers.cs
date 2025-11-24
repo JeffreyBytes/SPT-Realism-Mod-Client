@@ -157,8 +157,7 @@ namespace RealismMod.Audio
         private const float GEIGER_VOLUME = 0.32f;
         private const float BASE_BREATH_VOLUME = 0.3f;
         private const float TOGGLE_DEVICE_VOLUME = 0.6f;
-        private const float HEARTBEAT_TENSE_VOLUME = 0.5f;
-        private const float HEARTBEAT_TENSE_FADE_SPEED = 0.001f;
+        private const float HEARTBEAT_TENSE_FADE_SPEED = 0.005f;
 
         public bool ClipsAreReady = false;
 
@@ -304,11 +303,11 @@ namespace RealismMod.Audio
             bool doHeartbeat = Plugin.RealHealthController.HasPositiveAdrenalineEffect || Plugin.RealHealthController.HasNegativeAdrenalineEffect;
             if (Plugin.RealHealthController.HasPositiveAdrenalineEffect)
             {
-                _heartBeatSfxVolModi = HEARTBEAT_TENSE_VOLUME;
+                _heartBeatSfxVolModi = PluginConfig.HeartBeatVolume.Value;
             }
             else if (Plugin.RealHealthController.HasNegativeAdrenalineEffect)
             {
-                _heartBeatSfxVolModi = Mathf.Lerp(_heartBeatSfxVolModi, 0f, HEARTBEAT_TENSE_FADE_SPEED);
+                _heartBeatSfxVolModi = Mathf.Lerp(_heartBeatSfxVolModi, 0.1f, HEARTBEAT_TENSE_FADE_SPEED);
             }
             else
             {

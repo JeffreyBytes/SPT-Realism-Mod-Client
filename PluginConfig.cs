@@ -125,8 +125,9 @@ namespace RealismMod
         public static ConfigEntry<KeyboardShortcut> MuteGeigerKey { get; set; }
         public static ConfigEntry<KeyboardShortcut> MuteGasAnalyserKey { get; set; }
         public static ConfigEntry<KeyboardShortcut> ToggleGasMaskKey { get; set; }
-        
+
         //medical
+        public static ConfigEntry<float> HeartBeatVolume { get; set; }
         public static ConfigEntry<bool> EnableMedNotes { get; set; }
         public static ConfigEntry<bool> ResourceRateChanges { get; set; }
         public static ConfigEntry<bool> PassiveRegen { get; set; }
@@ -148,6 +149,7 @@ namespace RealismMod
         public static ConfigEntry<KeyboardShortcut> PatrolKeybind { get; set; }
         public static ConfigEntry<KeyboardShortcut> MeleeKeybind { get; set; }
         public static ConfigEntry<KeyboardShortcut> StanceWheelComboKeyBind { get; set; }
+        public static ConfigEntry<float> StanceSfxModifier { get; set; }
         public static ConfigEntry<bool> EnableAnimationFixes { get; set; }
         public static ConfigEntry<bool> ModifyBSGCollision { get; set; }
         public static ConfigEntry<bool> OverrideCollision { get; set; }
@@ -368,6 +370,7 @@ namespace RealismMod
             GearBlocksHeal = config.Bind<bool>(healthSettings, "Gear Blocks Healing", false, new ConfigDescription("Gear Blocks Use Of Meds If The Wound Is Covered By It.", null, new ConfigurationManagerAttributes { Order = 70, Browsable = Plugin.ServerConfig.med_changes }));
             EnableAdrenaline = config.Bind<bool>(healthSettings, "Adrenaline", Plugin.ServerConfig.med_changes, new ConfigDescription("If The Player Is Shot or Shot At They Will Get A Painkiller Effect, As Well As Tunnel Vision and Tremors. The Duration And Strength Of These Effects Are Determined By The Stress Resistence Skill.", null, new ConfigurationManagerAttributes { Order = 55, Browsable = Plugin.ServerConfig.med_changes }));
             DropGearKeybind = config.Bind(healthSettings, "Remove Gear Keybind (Double Press)", new KeyboardShortcut(KeyCode.P), new ConfigDescription("Removes Any Gear That Is Blocking The Healing Of A Wound, It's A Double Press Like Bag Keybind Is.", null, new ConfigurationManagerAttributes { Order = 50, Browsable = Plugin.ServerConfig.med_changes }));
+            HeartBeatVolume = config.Bind<float>(healthSettings, "Heartbeat SFX Volume", 0.4f, new ConfigDescription("Volume modifier for heartbeat sfx (used for Adrenaline)", new AcceptableValueRange<float>(0.0f, 2f), new ConfigurationManagerAttributes { Order = 110, Browsable = Plugin.ServerConfig.med_changes }));
 
             EnableFSPatch = config.Bind<bool>(miscSettings, "Enable Faceshield Patch", Plugin.ServerConfig.enable_stances, new ConfigDescription("Faceshields Block ADS Unless The Specfic Stock/Weapon/Faceshield Allows It.", null, new ConfigurationManagerAttributes { Order = 4, Browsable = Plugin.ServerConfig.enable_stances }));
             EnableNVGPatch = config.Bind<bool>(miscSettings, "Enable NVG/Thermal ADS Patch", Plugin.ServerConfig.enable_stances, new ConfigDescription("Magnified Optics Block ADS When Using NVGs. Can't Aim With Sights When Using Thermal Goggles.", null, new ConfigurationManagerAttributes { Order = 5, Browsable = Plugin.ServerConfig.enable_stances }));
@@ -460,6 +463,7 @@ namespace RealismMod
             WeapOffset = config.Bind<Vector3>(weapAimAndPos, "Rifle Position Offset", new Vector3(-0.04f, -0.015f, 0f), new ConfigDescription("Config option 'alt rife' is required. Adjusts The Starting Position Of Rifle On Screen.", null, new ConfigurationManagerAttributes { ShowRangeAsPercent = false, Order = 152, IsAdvanced = true, Browsable = Plugin.ServerConfig.enable_stances }));
             StanceRotationSpeedMulti = config.Bind<float>(weapAimAndPos, "Stance Rotation Speed Multi", 1f, new ConfigDescription("Adjusts The Speed Of Stance Rotation Changes.", new AcceptableValueRange<float>(0.1f, 10f), new ConfigurationManagerAttributes { ShowRangeAsPercent = false, Order = 146, IsAdvanced = true, Browsable = Plugin.ServerConfig.enable_stances }));
             StanceTransitionSpeedMulti = config.Bind<float>(weapAimAndPos, "Stance Transition Speed.", 15.0f, new ConfigDescription("Adjusts The Position Change Speed Between Stances", new AcceptableValueRange<float>(1f, 35f), new ConfigurationManagerAttributes { ShowRangeAsPercent = false, Order = 145, IsAdvanced = true, Browsable = Plugin.ServerConfig.enable_stances }));
+            StanceSfxModifier = config.Bind<float>(weapAimAndPos, "Stance Sfx Volume Modifier", 2f, new ConfigDescription("Gear rattle volume modifer when doing stance related things", new AcceptableValueRange<float>(0.1f, 20f), new ConfigurationManagerAttributes { ShowRangeAsPercent = false, Order = 153, Browsable = Plugin.ServerConfig.enable_stances }));
 
             CycleStancesKeybind = config.Bind(stanceBinds, "Cycle Stances Keybind", new KeyboardShortcut(KeyCode.None), new ConfigDescription("Cycles Between High, Low Ready and Short-Stocking. Double Click Returns To Idle.", null, new ConfigurationManagerAttributes { Order = 80, Browsable = Plugin.ServerConfig.enable_stances }));
             ActiveAimKeybind = config.Bind(stanceBinds, "Active Aim Keybind", new KeyboardShortcut(KeyCode.Mouse4), new ConfigDescription("Cants The Weapon Sideways, Improving Hipfire Accuracy.", null, new ConfigurationManagerAttributes { Order = 90, Browsable = Plugin.ServerConfig.enable_stances }));
